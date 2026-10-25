@@ -1,0 +1,1180 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Pixel Extract</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Silkscreen&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* Layout: two-column workbench — photo stage + straighten on the left, grid / colours / result on the right; stacks on phones */
+:root{
+  --bg:#e7eae8; --surface:#f7f8f6; --ink:#1a1e21; --muted:#59636a; --line:#c6cdca;
+  --accent:#2343c4; --accent-ink:#ffffff; --chk:#dde2df;
+  --f-display:"Silkscreen", "Courier New", monospace;
+  --f-body:"Work Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141719; --surface:#1d2124; --ink:#e6eae8; --muted:#9aa5a9; --line:#353c40;
+  --accent:#7e95ff; --accent-ink:#0e1230; --chk:#262b2f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141719; --surface:#1d2124; --ink:#e6eae8; --muted:#9aa5a9; --line:#353c40;
+  --accent:#7e95ff; --accent-ink:#0e1230; --chk:#262b2f; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1240px;margin:0 auto;padding-block:20px 40px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px))}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;margin-bottom:16px}
+h1{font-family:var(--f-display);font-weight:400;font-size:2rem;letter-spacing:.02em;margin:0;line-height:1}
+header p{margin:0;color:var(--muted);max-width:60ch}
+.app{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:860px){.app{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.bar h2{margin:0 auto 0 0}
+h2{font-family:var(--f-display);font-weight:400;font-size:1rem;letter-spacing:.06em;text-transform:uppercase;margin:0}
+h2 b{color:var(--accent);font-weight:400;margin-right:.4em}
+.btn{font:500 14px/1 var(--f-body);border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);
+  padding:9px 13px;border-radius:4px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;min-height:38px}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.sm{padding:6px 10px;min-height:32px;font-size:13px}
+.btn:focus-visible,input:focus-visible,.step button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.stage{position:relative;display:flex;justify-content:center;align-items:center;border-radius:4px;overflow:hidden;min-height:200px;
+  background:repeating-conic-gradient(var(--chk) 0 25%, var(--surface) 0 50%) 0 0/16px 16px}
+#cv{display:block;max-width:100%;touch-action:none;cursor:crosshair}
+#cv.grab{cursor:grab} #cv.move{cursor:move}
+.tools{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}
+.zoom{display:flex;align-items:center;gap:6px}
+.seg{display:flex;flex-wrap:wrap;border:1px solid var(--accent);border-radius:4px;overflow:hidden}
+.seg button{font:500 13px/1 var(--f-body);border:0;background:transparent;color:var(--accent);padding:8px 11px;min-height:34px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--accent)}
+.seg button.on{background:var(--accent);color:var(--accent-ink)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-4px}
+.countbar{display:flex;flex-direction:column;gap:8px;padding:10px;border:1px dashed var(--accent);border-radius:4px}
+.countbar[hidden]{display:none}
+.kbd{font:500 11px var(--f-mono);border:1px solid var(--line);border-radius:3px;padding:1px 5px;color:var(--muted)}
+.pct{display:inline-flex;align-items:center;gap:3px;font:500 14px var(--f-mono)}
+.pct input{width:4.2em;font:500 14px var(--f-mono);padding:5px 6px;border:1px solid var(--line);border-radius:4px;background:var(--surface);color:var(--ink);text-align:right}
+.cntin{display:flex;align-items:center;gap:8px;font-weight:500}
+.cntin .step{width:9.5em}
+.cnt{font:500 20px/1 var(--f-mono)!important;color:var(--ink)!important;min-width:3ch}
+.zoom output{font:500 13px var(--f-mono);font-variant-numeric:tabular-nums;min-width:5ch;text-align:center;color:var(--muted)}
+.panel.fs{position:fixed;inset:0;z-index:50;border:0;border-radius:0;width:100%;height:100%;
+  padding-block:max(10px, env(safe-area-inset-top, 0px)) max(10px, env(safe-area-inset-bottom, 0px));
+  padding-left:max(12px, env(safe-area-inset-left, 0px));padding-right:max(12px, env(safe-area-inset-right, 0px))}
+.panel.fs .stage{flex:1 1 0;min-height:0}
+.ablock summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px}
+.ablock summary::-webkit-details-marker{display:none}
+.ablock summary::after{content:"▾";color:var(--muted);font-size:14px}
+.ablock:not([open]) summary::after{content:"▸"}
+.ablock-body{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+.adjgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px 18px}
+.panel.fs .ablock{border-top:1px solid var(--line);padding-top:6px}
+.panel.fs .ablock .ahint{display:none}
+.tblock{min-width:0}
+.levels{display:flex;flex-direction:column;gap:6px;grid-column:1/-1}
+.levels .status{margin:0}
+.levelrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.lvlab{font-weight:500;min-width:7.5em}
+.expprev{max-width:100%;max-height:40vh;border:1px solid var(--line);border-radius:4px;align-self:flex-start}
+.lvdot{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;font:700 10px var(--f-mono);font-style:normal;color:#0b1418;margin-right:6px;vertical-align:-3px}
+.lv-v{background:#3ddc84}.lv-h{background:#ffd23f}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 13px/1 var(--f-body);padding:8px 12px;min-height:34px;border-radius:999px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+.chip[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chip[aria-pressed=true]::before{content:"✓ "}
+.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.palexp{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px}
+.petext{width:100%;font:12px/1.45 var(--f-mono);background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:8px;resize:vertical}
+.howto{margin-top:16px}
+.howto summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px}
+.howto summary::-webkit-details-marker{display:none}
+.howto summary::after{content:"▾";color:var(--muted);font-size:14px}
+.howto:not([open]) summary::after{content:"▸"}
+.howto-body{display:flex;flex-direction:column;gap:14px;margin-top:12px;max-width:72ch}
+.lede{margin:0;font-size:16px;line-height:1.6}
+.hw-figwrap{overflow-x:auto;max-width:100%}
+.hw-fig{display:block;width:100%;min-width:480px;max-width:640px;height:auto}
+.hw-grid{stroke:var(--surface);stroke-width:1.4;opacity:.9}
+.hw-dot{fill:#ffd60a;stroke:#111;stroke-width:1}
+.hw-frame{stroke:var(--muted);stroke-width:1}
+.hw-arrow{fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hw-cap{fill:var(--ink);font:500 12px var(--f-body);text-anchor:middle}
+.hw-sub{fill:var(--muted);font:11px var(--f-mono);text-anchor:middle}
+.hw-steps{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:10px}
+.hw-steps li{padding-left:.2em}
+.lvsel{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:6px}
+.lvsel select{font:500 13px var(--f-body);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:7px 8px;min-height:34px}
+.lvbtn.armed{background:transparent;color:var(--accent)}
+.tbody{display:flex;flex-direction:column;gap:12px;margin-top:12px;min-width:0}
+.adjgrid.sized{max-height:none}
+.panel:not(.fs) .adjgrid{resize:vertical;overflow:auto;max-height:none}
+.panel.fs .hint{display:none}
+.panel.fs .tbody{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:4px 18px;align-items:end;margin-top:6px}
+.panel.fs .tblock .bar{flex-direction:column;align-items:flex-start;gap:4px}
+@media (max-width:700px){.panel.fs .tbody{grid-template-columns:minmax(0,1fr)}.panel.fs .tblock .bar{flex-direction:row}}
+.fswrap{display:none}
+.panel.fs .fswrap{display:flex;flex-direction:column;min-height:0;flex:none}
+.grip{height:16px;display:flex;align-items:center;justify-content:center;cursor:ns-resize;touch-action:none;border-radius:4px;flex:none}
+.grip::before{content:"";width:48px;height:4px;border-radius:2px;background:var(--line)}
+.grip:hover::before,.grip:focus-visible::before{background:var(--accent)}
+.grip:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.panel.fs #fsSlot{overflow:auto;min-height:0;display:flex;flex-direction:column;gap:6px;padding-right:4px}
+.fsprev{display:none}
+.panel.fs .fsprev{display:block;position:absolute;right:10px;bottom:10px;max-width:22%;max-height:32%;
+  image-rendering:pixelated;image-rendering:crisp-edges;border:2px solid var(--surface);box-shadow:0 2px 10px rgba(0,0,0,.35);background:var(--bg)}
+.hint{margin:0;color:var(--muted);font-size:13.5px}
+.sl{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 10px}
+.sl label{font-weight:500}
+.sl output{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:13px;color:var(--muted);min-width:5ch;text-align:right}
+.sl .row{grid-column:1/-1;display:flex;align-items:center;gap:8px}
+.sl input[type=range]{flex:1;min-width:0;accent-color:var(--accent);height:28px}
+.nud{width:32px;height:32px;border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:4px;font:500 16px/1 var(--f-mono);cursor:pointer;flex:none}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field>span{font-weight:500}
+.step{display:flex;border:1px solid var(--line);border-radius:4px;overflow:hidden;background:var(--bg)}
+.step button{width:38px;border:0;background:transparent;color:var(--ink);font:500 18px/1 var(--f-mono);cursor:pointer}
+.step input{flex:1;min-width:0;width:100%;border:0;border-inline:1px solid var(--line);background:var(--surface);color:var(--ink);
+  text-align:center;font:500 16px var(--f-mono);font-variant-numeric:tabular-nums;padding:8px 0}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px}
+.chk input{accent-color:var(--accent);width:18px;height:18px}
+.status{font-size:13.5px;color:var(--muted);margin:0;min-height:1.5em}
+.result-img{display:flex;justify-content:center;border-radius:4px;overflow:hidden;
+  background:repeating-conic-gradient(var(--chk) 0 25%, var(--surface) 0 50%) 0 0/16px 16px}
+.result-img img{display:block;max-width:100%;max-height:60vh;image-rendering:pixelated;image-rendering:crisp-edges}
+.meta{display:flex;flex-wrap:wrap;gap:6px 14px;font-family:var(--f-mono);font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.meta b{color:var(--ink);font-weight:500}
+.one{display:flex;align-items:center;gap:10px;font-size:13.5px;color:var(--muted)}
+.one img{image-rendering:pixelated;border:1px solid var(--line);background:var(--bg);flex:none}
+.sw{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:6px}
+.sw div{display:flex;align-items:center;gap:6px;font:12px var(--f-mono);color:var(--muted);min-width:0}
+.sw i{width:18px;height:18px;border-radius:3px;border:1px solid var(--line);flex:none}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <h1>Pixel Extract</h1>
+  <p>Take a pixel art image and extract it by straightening and marking the grid to get the original 1:1 underlying image.</p>
+</header>
+
+<main class="app">
+  <section class="col">
+    <div class="panel" id="photoPanel">
+      <div class="bar">
+        <h2>Photo</h2>
+        <label class="btn" for="file">Choose photo</label>
+        <input id="file" class="vh" type="file" accept="image/*">
+        <button id="sample" class="btn ghost">Sample mural</button>
+      </div>
+      <div class="tools">
+        <div class="zoom">
+          <button id="zOut" class="nud" aria-label="Zoom out">−</button><output id="zl">100%</output><button id="zIn" class="nud" aria-label="Zoom in">+</button>
+          <button id="zFit" class="btn ghost sm">Fit</button>
+        </div>
+        <button id="fsBtn" class="btn ghost sm">Full screen</button>
+      </div>
+      <div class="tools">
+        <div class="seg" id="toolSeg" role="group" aria-label="Tool">
+          <button data-tool="box" class="on" aria-pressed="true">Grid box</button><button data-tool="count" aria-pressed="false">Count</button><button data-tool="edge" aria-pressed="false">Edges</button><button data-tool="mark" aria-pressed="false">Mark blocked</button>
+        </div>
+      </div>
+      <div class="countbar" id="markBar" hidden>
+        <div class="tools">
+          <div class="seg" id="markSeg" role="group" aria-label="What dragging does"><button data-mm="add" class="on" aria-pressed="true">Add blocked</button><button data-mm="erase" aria-pressed="false">Erase marks</button></div>
+          <div class="zoom"><button id="undoM" class="btn ghost sm">Undo</button><button id="clearM" class="btn ghost sm">Clear marks</button></div>
+        </div>
+        <div class="tools" style="justify-content:flex-start;gap:8px 18px">
+          <label class="chk"><input id="showMarks" type="checkbox" checked> Show marks <span class="kbd">M</span></label>
+          <label class="cntin" for="markT">Transparency
+            <input type="range" id="markT" min="0" max="100" step="1" value="45" style="width:9em;accent-color:var(--accent)">
+            <span class="pct"><input id="markTn" type="number" inputmode="numeric" min="0" max="100" step="1" value="45" aria-label="Transparency percent">%</span></label>
+        </div>
+        <p class="status" style="margin:0">Drag around anything covering the art. Switch to <b>Erase marks</b> (or hold Alt while dragging) to cut mistakes back out.</p>
+      </div>
+      <div class="tools" style="justify-content:flex-start;gap:6px 18px">
+        <label class="chk"><input id="showGrid" type="checkbox" checked> Show grid</label>
+        <label class="chk"><input id="showDots" type="checkbox" checked> Show dots</label>
+        <label class="chk"><input id="showLines" type="checkbox" checked> Show lines</label>
+      </div>
+      <div class="countbar" id="cntBar" hidden>
+        <div class="tools">
+          <div class="seg" id="axSeg" role="group" aria-label="What you are counting"><button data-axis="cols" class="on" aria-pressed="true">Columns</button><button data-axis="rows" aria-pressed="false">Rows</button></div>
+          <div class="zoom"><output id="cntN" class="cnt">0</output><button id="cntCopy" class="btn ghost sm">Copy</button><button id="cntUse" class="btn sm">Use as columns</button><button id="cntClear" class="btn ghost sm">Clear dots</button></div>
+        </div>
+        <div class="tools" style="justify-content:flex-start;gap:6px 18px">
+          <label class="cntin">Columns <span class="step"><button data-s="cols" data-d="-1" aria-label="Fewer columns">−</button><input id="cols2" type="number" inputmode="numeric" min="1" max="512" aria-label="Columns"><button data-s="cols" data-d="1" aria-label="More columns">+</button></span></label>
+          <label class="cntin">Rows <span class="step"><button data-s="rows" data-d="-1" aria-label="Fewer rows">−</button><input id="rows2" type="number" inputmode="numeric" min="1" max="512" aria-label="Rows"><button data-s="rows" data-d="1" aria-label="More rows">+</button></span></label>
+        </div>
+        <div class="tools" style="justify-content:flex-start;gap:6px 18px">
+          <label class="chk"><input id="cntAuto" type="checkbox" checked> Auto-fill the count</label>
+          <label class="chk"><input id="cntFit" type="checkbox" checked> Line up the grid with the dots</label>
+        </div>
+        <p class="status" id="cntStatus"></p>
+      </div>
+      <div class="countbar" id="edgeBar" hidden>
+        <div class="tools">
+          <p class="status" id="edgeStatus" style="flex:1;min-width:14em;margin:0"></p>
+          <div class="zoom"><button id="edgeStraight" class="btn sm">Straighten from lines</button><button class="btn ghost sm snapbox">Snap grid box to lines</button><button id="edgeFit" class="btn ghost sm">Fit grid to lines</button><button id="edgeClear" class="btn ghost sm">Clear lines</button></div>
+        </div>
+      </div>
+      <div class="stage" id="stage"><canvas id="cv" width="10" height="10" aria-label="Corrected photo with grid overlay"></canvas><img id="fsPrev" class="fsprev" alt="Result preview"></div>
+      <div class="fswrap" id="fsWrap"><div class="grip" id="fsGrip" role="separator" aria-orientation="horizontal" aria-label="Drag to resize the controls" tabindex="0" title="Drag to resize · double-click to reset"></div><div id="fsSlot"></div></div>
+      <p class="hint">Drag the box corners or edges onto the outer edge of the artwork; drag inside it to move it. Scroll or pinch to zoom. Drag outside the box, right-drag, or hold Space to pan.
+        With <b>Mark blocked</b>, draw around anything covering the art (a pipe, handle, sticker). Those areas are skipped; a cell that is fully covered is filled in from its neighbours.
+        With <b>Count</b>, put one dot on every column (or row) of big pixels, hopping to whichever row has the clearest contrast. Right-click or tap a dot to remove it.
+        With <b>Edges</b>, drag a straight line along the border between two big pixels. Lines extend across the photo so you can see if the grid is square, can straighten the photo for you, and snap the grid's spacing to the edges you drew.</p>
+    </div>
+
+    <div class="panel" id="tPanel">
+      <details id="tBlock" class="tblock ablock"><summary><h2><b>1</b>Straighten</h2></summary><div class="tbody">
+      <div class="bar">
+        <div class="seg" id="modeSeg" role="group" aria-label="What the sliders move"><button data-mode="image" class="on" aria-pressed="true">Image</button><button data-mode="grid" aria-pressed="false">Grid</button></div>
+        <button id="resetT" class="btn ghost sm">Reset</button></div>
+      <div class="levels">
+        <div class="levelrow"><span class="lvlab"><i class="lvdot lv-v">L</i>Left edge</span>
+          <button id="lvBtn_l" class="btn sm lvbtn" data-ax="l">Pick 2 points</button>
+          <label class="lvsel">fix with <select id="lvWhat_l"><option value="a" selected>Auto</option><option value="0">Straighten</option><option value="1">Vertical</option><option value="2">Horizontal</option></select></label>
+          <button id="lvClr_l" class="btn ghost sm" data-clr="l">Clear</button></div>
+        <div class="levelrow"><span class="lvlab"><i class="lvdot lv-v">R</i>Right edge</span>
+          <button id="lvBtn_r" class="btn sm lvbtn" data-ax="r">Pick 2 points</button>
+          <label class="lvsel">fix with <select id="lvWhat_r"><option value="a" selected>Auto</option><option value="0">Straighten</option><option value="1">Vertical</option><option value="2">Horizontal</option></select></label>
+          <button id="lvClr_r" class="btn ghost sm" data-clr="r">Clear</button></div>
+        <div class="levelrow"><span class="lvlab"><i class="lvdot lv-h">T</i>Top edge</span>
+          <button id="lvBtn_t" class="btn sm lvbtn" data-ax="t">Pick 2 points</button>
+          <label class="lvsel">fix with <select id="lvWhat_t"><option value="a" selected>Auto</option><option value="0">Straighten</option><option value="1">Vertical</option><option value="2">Horizontal</option></select></label>
+          <button id="lvClr_t" class="btn ghost sm" data-clr="t">Clear</button></div>
+        <div class="levelrow"><span class="lvlab"><i class="lvdot lv-h">B</i>Bottom edge</span>
+          <button id="lvBtn_b" class="btn sm lvbtn" data-ax="b">Pick 2 points</button>
+          <label class="lvsel">fix with <select id="lvWhat_b"><option value="a" selected>Auto</option><option value="0">Straighten</option><option value="1">Vertical</option><option value="2">Horizontal</option></select></label>
+          <button id="lvClr_b" class="btn ghost sm" data-clr="b">Clear</button></div>
+        <div class="levelrow"><span class="lvlab"></span><button class="btn sm snapbox">Snap grid box to my edges</button></div>
+        <p class="status" id="levelStatus"></p>
+      </div>
+      <div class="levels">
+        <div class="levelrow"><span class="lvlab">Export</span>
+          <label class="lvsel"><span class="vh">Area</span><select id="expCrop"><option value="all">Whole photo</option><option value="grid">Grid area + margin</option></select></label>
+          <label class="lvsel"><span class="vh">Format</span><select id="expFmt"><option value="png">PNG</option><option value="jpg">JPG</option></select></label>
+          <label class="chk"><input id="expAdj" type="checkbox"> Include view adjustments</label></div>
+        <div class="levelrow"><span class="lvlab"></span>
+          <button id="expSave" class="btn sm">Save straightened image</button>
+          <button id="expUse" class="btn ghost sm">Use as new photo</button></div>
+        <p class="status" id="expStatus"></p>
+        <img id="expPrev" class="expprev" alt="Straightened photo, ready to save" hidden>
+      </div>
+      <div class="sl"><label for="rot">Straighten</label><output id="rotV">0°</output>
+        <div class="row"><button class="nud" data-n="rot" data-d="-0.2" aria-label="Rotate less">−</button><input type="range" id="rot" min="-45" max="45" step="0.01" value="0"><button class="nud" data-n="rot" data-d="0.2" aria-label="Rotate more">+</button></div></div>
+      <div class="sl"><label for="ver">Vertical</label><output id="verV">0°</output>
+        <div class="row"><button class="nud" data-n="ver" data-d="-0.2" aria-label="Vertical tilt less">−</button><input type="range" id="ver" min="-40" max="40" step="0.01" value="0"><button class="nud" data-n="ver" data-d="0.2" aria-label="Vertical tilt more">+</button></div></div>
+      <div class="sl"><label for="hor">Horizontal</label><output id="horV">0°</output>
+        <div class="row"><button class="nud" data-n="hor" data-d="-0.2" aria-label="Horizontal tilt less">−</button><input type="range" id="hor" min="-40" max="40" step="0.01" value="0"><button class="nud" data-n="hor" data-d="0.2" aria-label="Horizontal tilt more">+</button></div></div>
+      </div></details>
+      <p class="hint">Like the Photos crop tool: adjust until the mural's grid lines run straight and parallel.</p>
+    </div>
+
+    <div class="panel" id="aPanel">
+      <details id="aBlock" class="ablock">
+        <summary><h2><b>2</b>Adjust view</h2></summary>
+        <div class="ablock-body">
+          <div class="tools" style="justify-content:flex-start;gap:8px 18px">
+            <button id="adjReset" class="btn ghost sm">Reset all</button>
+            <label class="chk"><input id="adjResult" type="checkbox"> Also apply to the result colours</label>
+          </div>
+          <div class="adjgrid" id="adjList"></div>
+          <p class="hint ahint">These only change what you see, to make the big pixels and their edges easier to pick out. Sampling uses the original photo unless you tick the box above.</p>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section class="col">
+    <div class="panel">
+      <div class="bar"><h2><b>3</b>Grid</h2><button id="detect" class="btn sm">Auto-detect</button></div>
+      <div class="pair">
+        <div class="field"><span>Columns</span>
+          <div class="step"><button data-s="cols" data-d="-1" aria-label="Fewer columns">−</button><input id="cols" type="number" inputmode="numeric" min="1" max="512" value="16" aria-label="Columns"><button data-s="cols" data-d="1" aria-label="More columns">+</button></div></div>
+        <div class="field"><span>Rows</span>
+          <div class="step"><button data-s="rows" data-d="-1" aria-label="Fewer rows">−</button><input id="rows" type="number" inputmode="numeric" min="1" max="512" value="20" aria-label="Rows"><button data-s="rows" data-d="1" aria-label="More rows">+</button></div></div>
+      </div>
+      <label class="chk"><input id="square" type="checkbox" checked> Square cells (rows follow columns)</label>
+      <p class="status" id="detStatus"></p>
+      <div class="sl"><label for="inner">Sample area per cell</label><output id="innerV">50%</output>
+        <div class="row"><input type="range" id="inner" min="10" max="95" step="5" value="50"></div></div>
+      <p class="hint">Only the centre of each cell is read, and the median colour is kept, so grout lines, shadows and edge bleed are ignored.</p>
+    </div>
+
+    <div class="panel">
+      <h2><b>4</b>Colours</h2>
+      <div class="seg" id="palSeg" role="group" aria-label="Colour depth" style="align-self:flex-start">
+        <button data-pal="full" class="on" aria-pressed="true">Full colour (24-bit)</button><button data-pal="pal" aria-pressed="false">Palette (up to 256)</button></div>
+      <div id="palBox" hidden>
+        <label class="cntin" for="pal">Colours
+          <input type="range" id="pal" min="2" max="256" step="1" value="16" style="flex:1;min-width:6em;accent-color:var(--accent)">
+          <span class="pct"><input id="palN" type="number" inputmode="numeric" min="2" max="256" step="1" value="16" aria-label="Number of colours"></span></label>
+      </div>
+      <p class="hint" id="palHint">Every cell keeps its exact measured colour: 3 bytes per pixel, up to 16.7 million colours.</p>
+    </div>
+
+    <div class="panel">
+      <h2>Result</h2>
+      <div class="result-img"><img id="big" alt="Recovered pixel art, enlarged"></div>
+      <div class="meta" id="meta"></div>
+      <label class="chk"><input id="showFill" type="checkbox"> Outline cells that were filled in from neighbours</label>
+      <div class="one"><img id="one" alt="Recovered pixel art at 1:1"><span>True size, one pixel per cell. Long-press or right-click either image to save it.</span></div>
+      <div class="sw" id="sw"></div>
+      <div class="palexp" id="palExp">
+        <span class="lvlab">Export palette as</span>
+        <div class="chips" id="peChips" role="group" aria-label="Formats to include">
+          <button class="chip" data-f="css" aria-pressed="false">CSS stylesheet</button><button class="chip" data-f="java" aria-pressed="false">Java map</button><button class="chip" data-f="php" aria-pressed="false">PHP dictionary</button><button class="chip" data-f="py" aria-pressed="false">Python dictionary</button><button class="chip" data-f="txt" aria-pressed="true">Text file</button>
+        </div>
+        <div class="tools" style="justify-content:flex-start;gap:8px 10px">
+          <button id="peAll" class="btn ghost sm">Select all</button>
+          <button id="peSave" class="btn sm">Save selected as zip</button>
+          <span style="flex:1"></span>
+          <label class="lvsel">Preview <select id="peFmt"><option value="css">CSS</option><option value="java">Java</option><option value="php">PHP</option><option value="py">Python</option><option value="txt" selected>Text</option></select></label>
+          <button id="peCopy" class="btn ghost sm">Copy</button>
+        </div>
+        <p class="status" id="peStatus" style="margin:0"></p>
+        <textarea id="peText" class="petext" readonly rows="6" aria-label="Palette export preview"></textarea>
+      </div>
+    </div>
+  </section>
+</main>
+
+<details class="panel howto" id="howto">
+  <summary><h2>What and how does this tool work</h2></summary>
+  <div class="howto-body">
+    <p class="lede">Think of pixel art as <b>graph paper</b>. Take a sheet and, square by square, either fill a square in solid black or leave it white: no half-filled squares, no shading. Now blow that sheet up to the size of a wall or a utility box. Every big block you see on the mural is one square of that graph paper, and each square is exactly one pixel of the original image: filled or not, black or white. Pixel Extract works backwards: it finds the graph paper again and asks each square one question, <i>filled or empty?</i> Colour murals work the same way, the answer is just a colour instead of black or white.</p>
+    <div class="hw-figwrap"><svg class="hw-fig" viewBox="0 0 600 230" role="img" aria-label="A tilted photo of a black and white pixel smiley drawn on graph paper is straightened onto a grid, the centre of each square is read as filled or empty, and the result is a tiny 7 by 7 pixel image.">
+  <g><polygon points="35.1,43.7 55.0,41.6 47.7,62.5 24.0,65.0" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="55.0,41.6 74.8,39.5 71.3,60.0 47.7,62.5" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="74.8,39.5 94.7,37.4 95.0,57.5 71.3,60.0" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><polygon points="94.7,37.4 114.6,35.3 118.6,55.0 95.0,57.5" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><polygon points="114.6,35.3 134.5,33.2 142.2,52.5 118.6,55.0" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><polygon points="134.5,33.2 154.4,31.2 165.9,50.1 142.2,52.5" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="154.4,31.2 174.3,29.1 189.5,47.6 165.9,50.1" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="24.0,65.0 47.7,62.5 40.4,83.4 13.0,86.2" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="47.7,62.5 71.3,60.0 67.8,80.5 40.4,83.4" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><polygon points="71.3,60.0 95.0,57.5 95.2,77.6 67.8,80.5" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="95.0,57.5 118.6,55.0 122.6,74.7 95.2,77.6" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="118.6,55.0 142.2,52.5 150.0,71.8 122.6,74.7" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="142.2,52.5 165.9,50.1 177.3,69.0 150.0,71.8" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><polygon points="165.9,50.1 189.5,47.6 204.7,66.1 177.3,69.0" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="13.0,86.2 40.4,83.4 33.1,104.2 2.0,107.5" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><polygon points="40.4,83.4 67.8,80.5 64.2,101.0 33.1,104.2" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="67.8,80.5 95.2,77.6 95.4,97.7 64.2,101.0" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><polygon points="95.2,77.6 122.6,74.7 126.5,94.4 95.4,97.7" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="122.6,74.7 150.0,71.8 157.7,91.1 126.5,94.4" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><polygon points="150.0,71.8 177.3,69.0 188.8,87.9 157.7,91.1" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="177.3,69.0 204.7,66.1 220.0,84.6 188.8,87.9" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><polygon points="2.0,107.5 33.1,104.2 25.8,125.1 -9.1,128.8" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><polygon points="33.1,104.2 64.2,101.0 60.7,121.4 25.8,125.1" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="64.2,101.0 95.4,97.7 95.6,117.8 60.7,121.4" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="95.4,97.7 126.5,94.4 130.5,114.1 95.6,117.8" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="126.5,94.4 157.7,91.1 165.4,110.4 130.5,114.1" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="157.7,91.1 188.8,87.9 200.3,106.8 165.4,110.4" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="188.8,87.9 220.0,84.6 235.2,103.1 200.3,106.8" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><polygon points="-9.1,128.8 25.8,125.1 18.5,146.0 -20.1,150.1" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><polygon points="25.8,125.1 60.7,121.4 57.2,141.9 18.5,146.0" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="60.7,121.4 95.6,117.8 95.8,137.9 57.2,141.9" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><polygon points="95.6,117.8 130.5,114.1 134.5,133.8 95.8,137.9" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><polygon points="130.5,114.1 165.4,110.4 173.1,129.7 134.5,133.8" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><polygon points="165.4,110.4 200.3,106.8 211.7,125.7 173.1,129.7" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="200.3,106.8 235.2,103.1 250.4,121.6 211.7,125.7" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><polygon points="-20.1,150.1 18.5,146.0 11.2,166.9 -31.2,171.3" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="18.5,146.0 57.2,141.9 53.6,162.4 11.2,166.9" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><polygon points="57.2,141.9 95.8,137.9 96.0,158.0 53.6,162.4" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="95.8,137.9 134.5,133.8 138.4,153.5 96.0,158.0" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="134.5,133.8 173.1,129.7 180.8,149.0 138.4,153.5" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="173.1,129.7 211.7,125.7 223.2,144.6 180.8,149.0" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><polygon points="211.7,125.7 250.4,121.6 265.6,140.1 223.2,144.6" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="-31.2,171.3 11.2,166.9 4.0,187.7 -42.2,192.6" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="11.2,166.9 53.6,162.4 50.1,182.9 4.0,187.7" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="53.6,162.4 96.0,158.0 96.2,178.0 50.1,182.9" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><polygon points="96.0,158.0 138.4,153.5 142.4,173.2 96.2,178.0" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><polygon points="138.4,153.5 180.8,149.0 188.5,168.3 142.4,173.2" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><polygon points="180.8,149.0 223.2,144.6 234.7,163.5 188.5,168.3" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><polygon points="223.2,144.6 265.6,140.1 280.8,158.6 234.7,163.5" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/></g>
+  <g><rect x="262" y="36" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="282" y="36" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="302" y="36" width="20" height="20" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><rect x="322" y="36" width="20" height="20" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><rect x="342" y="36" width="20" height="20" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><rect x="362" y="36" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="382" y="36" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="262" y="56" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="282" y="56" width="20" height="20" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><rect x="302" y="56" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="322" y="56" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="342" y="56" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="362" y="56" width="20" height="20" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><rect x="382" y="56" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="262" y="76" width="20" height="20" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><rect x="282" y="76" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="302" y="76" width="20" height="20" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><rect x="322" y="76" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="342" y="76" width="20" height="20" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><rect x="362" y="76" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="382" y="76" width="20" height="20" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><rect x="262" y="96" width="20" height="20" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><rect x="282" y="96" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="302" y="96" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="322" y="96" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="342" y="96" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="362" y="96" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="382" y="96" width="20" height="20" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><rect x="262" y="116" width="20" height="20" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><rect x="282" y="116" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="302" y="116" width="20" height="20" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><rect x="322" y="116" width="20" height="20" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><rect x="342" y="116" width="20" height="20" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><rect x="362" y="116" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="382" y="116" width="20" height="20" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><rect x="262" y="136" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="282" y="136" width="20" height="20" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><rect x="302" y="136" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="322" y="136" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="342" y="136" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="362" y="136" width="20" height="20" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><rect x="382" y="136" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="262" y="156" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="282" y="156" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="302" y="156" width="20" height="20" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><rect x="322" y="156" width="20" height="20" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><rect x="342" y="156" width="20" height="20" fill="#1b1b1b" stroke="#b9b6ae" stroke-width="1"/><rect x="362" y="156" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="382" y="156" width="20" height="20" fill="#f7f6f1" stroke="#b9b6ae" stroke-width="1"/><rect x="262" y="36" width="140" height="140" fill="none" stroke="#ffd60a" stroke-width="2.5"/><circle cx="272.0" cy="46.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="292.0" cy="46.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="312.0" cy="46.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="332.0" cy="46.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="352.0" cy="46.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="372.0" cy="46.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="392.0" cy="46.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="272.0" cy="66.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="292.0" cy="66.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="312.0" cy="66.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="332.0" cy="66.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="352.0" cy="66.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="372.0" cy="66.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="392.0" cy="66.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="272.0" cy="86.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="292.0" cy="86.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="312.0" cy="86.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="332.0" cy="86.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="352.0" cy="86.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="372.0" cy="86.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="392.0" cy="86.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="272.0" cy="106.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="292.0" cy="106.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="312.0" cy="106.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="332.0" cy="106.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="352.0" cy="106.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="372.0" cy="106.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="392.0" cy="106.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="272.0" cy="126.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="292.0" cy="126.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="312.0" cy="126.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="332.0" cy="126.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="352.0" cy="126.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="372.0" cy="126.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="392.0" cy="126.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="272.0" cy="146.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="292.0" cy="146.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="312.0" cy="146.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="332.0" cy="146.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="352.0" cy="146.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="372.0" cy="146.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="392.0" cy="146.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="272.0" cy="166.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="292.0" cy="166.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="312.0" cy="166.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="332.0" cy="166.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="352.0" cy="166.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="372.0" cy="166.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/><circle cx="392.0" cy="166.0" r="2.6" fill="#ffd60a" stroke="#111" stroke-width=".8"/></g>
+  <g><rect x="505" y="82" width="42" height="42" fill="#f7f6f1"/><rect x="517" y="82" width="6" height="6" fill="#1b1b1b"/><rect x="523" y="82" width="6" height="6" fill="#1b1b1b"/><rect x="529" y="82" width="6" height="6" fill="#1b1b1b"/><rect x="511" y="88" width="6" height="6" fill="#1b1b1b"/><rect x="535" y="88" width="6" height="6" fill="#1b1b1b"/><rect x="505" y="94" width="6" height="6" fill="#1b1b1b"/><rect x="517" y="94" width="6" height="6" fill="#1b1b1b"/><rect x="529" y="94" width="6" height="6" fill="#1b1b1b"/><rect x="541" y="94" width="6" height="6" fill="#1b1b1b"/><rect x="505" y="100" width="6" height="6" fill="#1b1b1b"/><rect x="541" y="100" width="6" height="6" fill="#1b1b1b"/><rect x="505" y="106" width="6" height="6" fill="#1b1b1b"/><rect x="517" y="106" width="6" height="6" fill="#1b1b1b"/><rect x="523" y="106" width="6" height="6" fill="#1b1b1b"/><rect x="529" y="106" width="6" height="6" fill="#1b1b1b"/><rect x="541" y="106" width="6" height="6" fill="#1b1b1b"/><rect x="511" y="112" width="6" height="6" fill="#1b1b1b"/><rect x="535" y="112" width="6" height="6" fill="#1b1b1b"/><rect x="517" y="118" width="6" height="6" fill="#1b1b1b"/><rect x="523" y="118" width="6" height="6" fill="#1b1b1b"/><rect x="529" y="118" width="6" height="6" fill="#1b1b1b"/><rect x="505" y="82" width="42" height="42" fill="none" class="hw-frame"/></g>
+  <path d="M202 106h44" class="hw-arrow"/><path d="M240 100l8 6-8 6" class="hw-arrow"/>
+  <path d="M422 106h56" class="hw-arrow"/><path d="M472 100l8 6-8 6" class="hw-arrow"/>
+  <text x="112" y="214" class="hw-cap">1. Photo at an angle</text>
+  <text x="332" y="214" class="hw-cap">2. Straighten, grid, read squares</text>
+  <text x="526" y="214" class="hw-cap">3. One pixel per square</text>
+  <text x="526" y="142" class="hw-sub">7 × 7 px, actual size</text>
+</svg></div>
+    <ol class="hw-steps">
+      <li><b>Flatten the paper (Straighten).</b> A photo taken from below or off to the side turns the paper's neat rectangle into a slanted, tapering shape. The three sliders, the edge points and the Edges lines undo that tilt, so the grid lines on the art run straight up and level again.</li>
+      <li><b>Lay the grid on top (Grid, Count, Edges).</b> You tell Pixel Extract where the paper's border is and how many squares it has across and down. Counting dots, edge lines and Auto-detect all help line the yellow grid up with the art's real squares.</li>
+      <li><b>Read each square's colour.</b> For every square, Pixel Extract looks only at the middle of it and takes the median colour (on graph paper: is the middle black or white?), so grout lines, scratches, glare and the edges of neighbouring squares don't sneak in. Areas you marked as blocked are skipped; a square that's fully covered borrows from the squares around it.</li>
+      <li><b>Shrink each square to one pixel.</b> The colours are written out at one pixel per square, giving you the original underlying raster at 1:1. If you choose a palette, near-identical shades are merged back into the few paints the artist actually used.</li>
+    </ol>
+    <p class="hint">Why it works: each painted square covers hundreds or thousands of camera pixels, so even with uneven light and a bit of noise there's plenty of evidence to vote on what its one true colour is. View adjustments only change what you see, never what gets read, unless you tell them to.</p>
+  </div>
+</details>
+</div>
+
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const cv=$('cv'), ctx=cv.getContext('2d');
+let full=null, prev=null, PW=10, PH=10, Sx=1, Sy=1;
+let H=[1,0,0,0,1,0,0,0,1], Hinv=H.slice();
+let markMode='add',markAlpha=.55,markShow=true,markVer=0;
+let gridMode=false,levelPick=null,levelRefs={l:null,r:null,t:null,b:null};
+const LVK={l:'v',r:'v',t:'h',b:'h'},LVKEYS=['l','r','t','b'];
+const toD=(x,y)=>gridMode?ap(Hinv,x,y):[x,y];          /* grid space -> what's on screen */
+const toO=(x,y)=>gridMode?ap(H,x,y):[x,y];             /* screen -> grid space */
+const sToD=p=>gridMode?[p[0],p[1]]:ap(H,p[0],p[1]);    /* photo -> screen */
+let view={z:1,x:0,y:0},Hver=0,cache={key:'',img:null},bs=1,rr=1;
+/* Blocked-area mask: lasso shapes stored in photo coordinates so they stay put when the photo is straightened */
+let dots={cols:[],rows:[]},axis='cols',edges=[],edgeDraft=null;
+let strokes=[],mask=null,MW=1,MH=1,mk=1,maskVer=0,lasso=null,tool='box',lastMissing=null;
+function rebuildMask(){
+  maskVer++;if(!strokes.length){mask=null;return}
+  const c=document.createElement('canvas');c.width=MW;c.height=MH;const x=c.getContext('2d');x.fillStyle='#000';
+  for(const s of strokes){x.globalCompositeOperation=s.mode==='add'?'source-over':'destination-out';x.beginPath();
+    s.pts.forEach((p,i)=>i?x.lineTo(p[0]*mk,p[1]*mk):x.moveTo(p[0]*mk,p[1]*mk));x.closePath();x.fill()}
+  const d=x.getImageData(0,0,MW,MH).data;mask=new Uint8Array(MW*MH);let any=0;
+  for(let i=0;i<mask.length;i++)if(d[i*4+3]>127){mask[i]=1;any=1}
+  if(!any)mask=null;
+}
+function masked(px,py){if(!mask)return false;const x=(px*mk)|0,y=(py*mk)|0;return x>=0&&y>=0&&x<MW&&y<MH&&mask[y*MW+x]===1}
+let rect={x0:0,y0:0,x1:10,y1:10};
+const st={rot:0,ver:0,hor:0,cols:16,rows:20,inner:.5,k:0,square:true};
+
+/* ---------- 3x3 matrix helpers ---------- */
+function mul(A,B){const C=new Array(9);for(let r=0;r<3;r++)for(let c=0;c<3;c++)C[r*3+c]=A[r*3]*B[c]+A[r*3+1]*B[3+c]+A[r*3+2]*B[6+c];return C}
+function inv(m){const[a,b,c,d,e,f,g,h,i]=m;const A=e*i-f*h,B=-(d*i-f*g),C=d*h-e*g,det=a*A+b*B+c*C;
+  return[A/det,-(b*i-c*h)/det,(b*f-c*e)/det,B/det,(a*i-c*g)/det,-(a*f-c*d)/det,C/det,-(a*h-b*g)/det,(a*e-b*d)/det]}
+function ap(M,x,y){const w=M[6]*x+M[7]*y+M[8];return[(M[0]*x+M[1]*y+M[2])/w,(M[3]*x+M[4]*y+M[5])/w]}
+/* Camera-style perspective: rotate the image plane about its centre (z = straighten, x = vertical, y = horizontal) */
+function makeH0(W,Hh,rot,ver,hor){
+  const f=1.2*Math.max(W,Hh),cx=W/2,cy=Hh/2,r=Math.PI/180;
+  const K=[f,0,cx,0,f,cy,0,0,1],Ki=[1/f,0,-cx/f,0,1/f,-cy/f,0,0,1];
+  const t=rot*r,v=ver*r,h=hor*r,ct=Math.cos(t),s=Math.sin(t),cv_=Math.cos(v),sv=Math.sin(v),ch=Math.cos(h),sh=Math.sin(h);
+  const Rz=[ct,-s,0,s,ct,0,0,0,1],Rx=[1,0,0,0,cv_,-sv,0,sv,cv_],Ry=[ch,0,sh,0,1,0,-sh,0,ch];
+  return mul(K,mul(mul(Rz,mul(Rx,Ry)),Ki));
+}
+function computeH(){
+  const H0=makeH0(PW,PH,st.rot,st.ver,st.hor);
+  const pts=[[0,0],[PW,0],[PW,PH],[0,PH]].map(p=>ap(H0,p[0],p[1]));
+  const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);
+  const mnx=Math.min(...xs),mny=Math.min(...ys),bw=Math.max(...xs)-mnx,bh=Math.max(...ys)-mny;
+  const sc=Math.min(PW/bw,PH/bh);
+  const T=[sc,0,-mnx*sc+(PW-bw*sc)/2,0,sc,-mny*sc+(PH-bh*sc)/2,0,0,1];
+  H=mul(T,H0);Hinv=inv(H);Hver++;
+}
+/* dst pixel -> src via M, bilinear */
+function warpInto(src,sw,sh,dst,dw,dh,M,oob){
+  const s=src,o=dst,[a,b,c,d,e,f,g,h,i]=M;
+  for(let y=0;y<dh;y++){const Y=y+.5;
+    for(let x=0;x<dw;x++){const X=x+.5,w=g*X+h*Y+i,sx=(a*X+b*Y+c)/w-.5,sy=(d*X+e*Y+f)/w-.5,k=(y*dw+x)*4;
+      if(!(sx>=0&&sy>=0&&sx<=sw-1&&sy<=sh-1)){if(oob){o[k]=oob[0];o[k+1]=oob[1];o[k+2]=oob[2];o[k+3]=255}else o[k+3]=0;continue}
+      const x0=sx|0,y0=sy|0,x1=Math.min(x0+1,sw-1),y1=Math.min(y0+1,sh-1),fx=sx-x0,fy=sy-y0;
+      const p00=(y0*sw+x0)*4,p10=(y0*sw+x1)*4,p01=(y1*sw+x0)*4,p11=(y1*sw+x1)*4;
+      for(let ch=0;ch<3;ch++){const top=s[p00+ch]+(s[p10+ch]-s[p00+ch])*fx,bot=s[p01+ch]+(s[p11+ch]-s[p01+ch])*fx;o[k+ch]=top+(bot-top)*fy}
+      o[k+3]=255}}
+}
+/* Render the visible part of the corrected photo straight from the source at screen resolution */
+function renderView(){
+  const W=cv.width,Hh=cv.height,key=[view.z,view.x,view.y,gridMode?'g':Hver,W,Hh,maskVer,adjVer,markVer].join();
+  if(cache.key===key&&cache.img)return cache.img;
+  const img=(cache.img&&cache.img.width===W&&cache.img.height===Hh)?cache.img:ctx.createImageData(W,Hh),o=img.data;
+  const s=bs*view.z,[a,b,c,d,e,f,g,h,i]=gridMode?[1,0,0,0,1,0,0,0,1]:Hinv,usePrev=s<=1.05,P=prev.data,F=full.data,fw=full.w,fh=full.h;
+  for(let y=0;y<Hh;y++){const Y=view.y+(y+.5)/s;
+    for(let x=0;x<W;x++){const X=view.x+(x+.5)/s,w=g*X+h*Y+i,px=(a*X+b*Y+c)/w,py=(d*X+e*Y+f)/w,k=(y*W+x)*4;
+      if(usePrev){const sx=px-.5,sy=py-.5;
+        if(!(sx>=0&&sy>=0&&sx<=PW-1&&sy<=PH-1)){o[k+3]=0;continue}
+        const x0=sx|0,y0=sy|0,x1=Math.min(x0+1,PW-1),y1=Math.min(y0+1,PH-1),fx=sx-x0,fy=sy-y0;
+        const p00=(y0*PW+x0)*4,p10=(y0*PW+x1)*4,p01=(y1*PW+x0)*4,p11=(y1*PW+x1)*4;
+        for(let ch=0;ch<3;ch++){const t=P[p00+ch]+(P[p10+ch]-P[p00+ch])*fx,u=P[p01+ch]+(P[p11+ch]-P[p01+ch])*fx;o[k+ch]=t+(u-t)*fy}
+        o[k+3]=255}
+      else{const fx=Math.floor(px*Sx),fy=Math.floor(py*Sy);
+        if(fx<0||fy<0||fx>=fw||fy>=fh){o[k+3]=0;continue}
+        const q=(fy*fw+fx)*4;o[k]=F[q];o[k+1]=F[q+1];o[k+2]=F[q+2];o[k+3]=255}
+      if(adjOn)adjPix(o,k);
+      if(markShow&&markAlpha>0&&mask&&masked(px,py)){const st_=((x+y)>>2)&1?markAlpha:markAlpha*.72;o[k]=o[k]*(1-st_)+235*st_;o[k+1]=o[k+1]*(1-st_)+30*st_;o[k+2]=o[k+2]*(1-st_)+70*st_}}}
+  cache={key,img};return img;
+}
+/* Fit the canvas to the stage (or the whole screen) at device resolution */
+const panel=$('photoPanel'),stage=$('stage');
+function layout(){
+  if(!prev)return;const fs=panel.classList.contains('fs');
+  const avW=stage.clientWidth,avH=fs?stage.clientHeight:Math.max(240,innerHeight*.68);
+  const s=Math.min(avW/PW,avH/PH),dw=Math.max(1,Math.floor(PW*s)),dh=Math.max(1,Math.floor(PH*s));
+  cv.style.width=dw+'px';cv.style.height=dh+'px';
+  const dpr=window.devicePixelRatio||1;let bw=dw*dpr,bh=dh*dpr;const cap=2e6;
+  if(bw*bh>cap){const k=Math.sqrt(cap/(bw*bh));bw*=k;bh*=k}
+  bw=Math.max(1,Math.round(bw));bh=Math.max(1,Math.round(bh));
+  if(cv.width!==bw||cv.height!==bh){cv.width=bw;cv.height=bh;cache.key=''}
+  bs=bw/PW;rr=bw/dw;draw();
+}
+let lPending=false;const relayout=()=>{if(lPending)return;lPending=true;requestAnimationFrame(()=>{lPending=false;layout()})};
+if(window.ResizeObserver)new ResizeObserver(relayout).observe(stage);
+window.addEventListener('resize',relayout);
+function clampView(){const vw=PW/view.z,vh=PH/view.z;view.x=Math.max(0,Math.min(PW-vw,view.x));view.y=Math.max(0,Math.min(PH-vh,view.y))}
+function zoomAt(nz,ix,iy){nz=Math.max(1,Math.min(32,nz));const s0=bs*view.z,ox=(ix-view.x)*s0,oy=(iy-view.y)*s0;
+  view.z=nz;const s1=bs*nz;view.x=ix-ox/s1;view.y=iy-oy/s1;clampView();draw()}
+const zoomCentre=f=>zoomAt(view.z*f,view.x+PW/view.z/2,view.y+PH/view.z/2);
+
+/* ---------- source ---------- */
+function grab(img,w,h,max){const sc=Math.min(1,max/Math.max(w,h)),W=Math.max(1,Math.round(w*sc)),Hh=Math.max(1,Math.round(h*sc));
+  const c=document.createElement('canvas');c.width=W;c.height=Hh;const x=c.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(img,0,0,W,Hh);
+  return{w:W,h:Hh,data:x.getImageData(0,0,W,Hh).data}}
+function setSource(img,w,h){
+  full=grab(img,w,h,2400);prev=grab(img,w,h,900);
+  PW=prev.w;PH=prev.h;Sx=full.w/PW;Sy=full.h/PH;
+  view={z:1,x:0,y:0};cache={key:'',img:null};Hver++;
+  MW=Math.min(full.w,1800);mk=MW/PW;MH=Math.max(1,Math.round(PH*mk));strokes=[];lasso=null;lastMissing=null;levelRefs={l:null,r:null,t:null,b:null};dots={cols:[],rows:[]};edges=[];edgeDraft=null;rebuildMask();
+}
+
+/* ---------- sample mural ---------- */
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const SPRITE=["bbbbbbbbbbbbbbbb","bbbbbssssssbbbbb","bbbbssssssssbbbb","bbbsssssssssdbbb","bbkssssssssssdbb","bkkssssssssssdkb",
+"bkkseesssseesdkb","bkksssssssssddkb","bkkssssdsssssdkb","bkksssddssssddkb","bkkskkkkkkkksdkb","bbkskrrrrrrkskbb",
+"bbbkkkkkkkkkkbbb","bbbbbkkkkkkbbbbb","bwwwwwkkkkwwwwwb","wwgwwgwwgwwgwwgw","gwwgwwgwwgwwgwwg","bggwwgwwgwwgwggb",
+"bDDDDDDwwDDDDDDb","DDDDDDDwwDDDDDDD"];
+const PAL={b:[63,125,140],k:[74,46,28],s:[232,180,138],d:[196,138,99],e:[29,26,26],r:[176,65,62],w:[242,239,230],g:[185,182,173],D:[31,36,48]};
+const SAMPLE={W:1100,H:1000,ox:310,oy:200,cell:30,rot:5,ver:14,hor:-9};
+function loadSample(){
+  const{W,H:Hh,ox,oy,cell}=SAMPLE,R=rng(7),wall=new Uint8ClampedArray(W*Hh*4);
+  const cols=16,rows=20,mw=cols*cell+3,mh=rows*cell+3;
+  const jit=[];for(let j=0;j<rows;j++){jit[j]=[];for(let i=0;i<cols;i++)jit[j][i]=(R()-.5)*18}
+  for(let y=0;y<Hh;y++)for(let x=0;x<W;x++){const k=(y*W+x)*4;let c;
+    const mx=x-ox,my=y-oy;
+    if(mx>=0&&my>=0&&mx<mw&&my<mh){const ix=mx%cell,iy=my%cell,cx=Math.floor(mx/cell),cy=Math.floor(my/cell);
+      if(ix<3||iy<3||cx>=cols||cy>=rows)c=[88,82,74];
+      else{const p=PAL[SPRITE[cy][cx]],j=jit[cy][cx];const n=(R()-.5)*10;c=[p[0]+j+n,p[1]+j+n,p[2]+j+n]}}
+    else{const row=Math.floor(y/28),off=(row%2)*34,bx=Math.floor((x+off)/68),inB=(y%28)>=4&&((x+off)%68)>=4;
+      if(!inB)c=[172,165,153];else{const hsh=((Math.imul(bx,73856093)^Math.imul(row,19349663))>>>0)%1000/1000;
+        c=[138+hsh*40,70+hsh*22,56+hsh*14]}const n=(R()-.5)*14;c=[c[0]+n,c[1]+n,c[2]+n]}
+    if(x>=556&&x<604){const t=(x-580)/24,sh=1-t*t*.45+(t<-.3&&t>-.55?.18:0);c=[118*sh,104*sh,90*sh];if(y%160<8)c=c.map(v=>v*.78)}
+    wall[k]=c[0];wall[k+1]=c[1];wall[k+2]=c[2];wall[k+3]=255}
+  const H0=makeH0(W,Hh,SAMPLE.rot,SAMPLE.ver,SAMPLE.hor);
+  const photo=new Uint8ClampedArray(W*Hh*4);
+  warpInto(wall,W,Hh,photo,W,Hh,H0,[150,160,164]);
+  for(let y=0;y<Hh;y++)for(let x=0;x<W;x++){const k=(y*W+x)*4,l=1.12-.32*(x/W*.6+y/Hh*.4),n=(R()-.5)*8;
+    photo[k]=photo[k]*l+n+6;photo[k+1]=photo[k+1]*l+n+2;photo[k+2]=photo[k+2]*l+n-4}
+  const c=document.createElement('canvas');c.width=W;c.height=Hh;c.getContext('2d').putImageData(new ImageData(photo,W,Hh),0,0);
+  setSource(c,W,Hh);
+  setT(SAMPLE.rot,SAMPLE.ver,SAMPLE.hor);computeH();
+  const Hi0=inv(H0);
+  const q=[[ox+1.5,oy+1.5],[ox+1.5+cols*cell,oy+1.5],[ox+1.5+cols*cell,oy+1.5+rows*cell],[ox+1.5,oy+1.5+rows*cell]]
+    .map(p=>{const ph=ap(Hi0,p[0],p[1]);return ap(H,ph[0]/Sx,ph[1]/Sy)});
+  rect=bbox(q);
+  strokes=[{mode:'add',pts:[[551,-40],[609,-40],[609,1040],[551,1040]].map(p=>{const ph=ap(Hi0,p[0],p[1]);return[ph[0]/Sx,ph[1]/Sy]})}];rebuildMask();
+  st.cols=cols;st.rows=rows;$('cols').value=cols;$('rows').value=rows;
+  setPal(9);
+  $('detStatus').textContent='Sample: a 16 × 20 mural photographed at an angle, with a drainpipe in front. The sliders are set to square it up and the pipe is marked as blocked (red). Tap Clear marks to see the difference.';
+  result();layout();
+}
+
+/* ---------- transform controls ---------- */
+function setT(r,v,h){st.rot=r;st.ver=v;st.hor=h;$('rot').value=r;$('ver').value=v;$('hor').value=h;
+  $('rotV').textContent=(+r).toFixed(2)+'°';$('verV').textContent=(+v).toFixed(2)+'°';$('horV').textContent=(+h).toFixed(2)+'°'}
+function bbox(pts){const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]);return clampR({x0:Math.min(...xs),y0:Math.min(...ys),x1:Math.max(...xs),y1:Math.max(...ys)})}
+function clampR(r){const c=(v,a,b)=>Math.max(a,Math.min(b,v));let x0=c(r.x0,0,PW),x1=c(r.x1,0,PW),y0=c(r.y0,0,PH),y1=c(r.y1,0,PH);
+  if(x1-x0<4){x1=Math.min(PW,x0+4);x0=x1-4}if(y1-y0<4){y1=Math.min(PH,y0+4);y0=y1-4}return{x0,y0,x1,y1}}
+let tPending=false;
+function onTransform(){
+  if(!prev)return;
+  /* keep the grid the same size and centred on the same spot of the photo; only its angle changes */
+  const cx=(rect.x0+rect.x1)/2,cy=(rect.y0+rect.y1)/2,w=rect.x1-rect.x0,h=rect.y1-rect.y0,c=ap(Hinv,cx,cy);
+  const ls=M=>{const a=ap(M,c[0]-2,c[1]),b=ap(M,c[0]+2,c[1]),d=ap(M,c[0],c[1]-2),e=ap(M,c[0],c[1]+2);
+    return(Math.hypot(b[0]-a[0],b[1]-a[1])+Math.hypot(e[0]-d[0],e[1]-d[1]))/8};
+  const s0=ls(H);computeH();const k=ls(H)/s0,n=ap(H,c[0],c[1]);
+  rect={x0:n[0]-w*k/2,x1:n[0]+w*k/2,y0:n[1]-h*k/2,y1:n[1]+h*k/2};
+  if(tPending)return;tPending=true;
+  requestAnimationFrame(()=>{tPending=false;if($('cntFit').checked&&$('cntAuto').checked){applyDots('cols');applyDots('rows')}if(edges.length){if(dots.cols.length<2)fitEdges('v');if(dots.rows.length<2)fitEdges('h');if(tool==='edge')edgeStatus()}squareRows();if(tool==='count')cntStatus();result();draw()});
+}
+['rot','ver','hor'].forEach(n=>$(n).addEventListener('input',()=>{st[n]=+$(n).value;$(n+'V').textContent=st[n].toFixed(2)+'°';onTransform()}));
+document.querySelectorAll('.nud').forEach(b=>b.addEventListener('click',()=>{const n=b.dataset.n,el=$(n);
+  const v=Math.max(+el.min,Math.min(+el.max,Math.round((+el.value+ +b.dataset.d)*100)/100));el.value=v;el.dispatchEvent(new Event('input'))}));
+document.querySelectorAll('#modeSeg button').forEach(b=>b.addEventListener('click',()=>{
+  const g=b.dataset.mode==='grid';if(g===gridMode)return;
+  /* keep the same spot of the photo centred when switching */
+  const c=dpos(...(()=>{const r=cv.getBoundingClientRect();return[r.left+r.width/2,r.top+r.height/2]})()),o=toO(c[0],c[1]);
+  gridMode=g;const n=toD(o[0],o[1]);view.x+=n[0]-c[0];view.y+=n[1]-c[1];clampView();
+  document.querySelectorAll('#modeSeg button').forEach(x=>{const on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-pressed',on)});
+  cache.key='';draw()}));
+$('resetT').addEventListener('click',()=>{setT(0,0,0);onTransform()});
+
+/* ---------- drawing ---------- */
+function draw(){
+  if(!prev||!full)return;
+  ctx.setTransform(1,0,0,1,0,0);ctx.putImageData(renderView(),0,0);
+  const s=bs*view.z;ctx.setTransform(s,0,0,s,-view.x*s,-view.y*s);
+  const px=rr/s,{x0,y0,x1,y1}=rect;
+  const mv=(x,y)=>{const p=toD(x,y);ctx.moveTo(p[0],p[1])},ln=(x,y)=>{const p=toD(x,y);ctx.lineTo(p[0],p[1])};
+  const quad=(a,b,c,d)=>{mv(a,b);ln(c,b);ln(c,d);ln(a,d);ctx.closePath()};
+  if($('showGrid').checked){
+  ctx.beginPath();ctx.rect(0,0,PW,PH);quad(x0,y0,x1,y1);ctx.fillStyle='rgba(10,12,14,.42)';ctx.fill('evenodd');
+  const cw=(x1-x0)/st.cols,chh=(y1-y0)/st.rows;
+  ctx.beginPath();
+  for(let i=1;i<st.cols;i++){const x=x0+i*cw;mv(x,y0);ln(x,y1)}
+  for(let j=1;j<st.rows;j++){const y=y0+j*chh;mv(x0,y);ln(x1,y)}
+  ctx.lineWidth=2.2*px;ctx.strokeStyle='rgba(0,0,0,.45)';ctx.stroke();
+  ctx.lineWidth=1*px;ctx.strokeStyle='rgba(255,255,255,.85)';ctx.stroke();
+  if(cw/px>10&&chh/px>10){const f=st.inner;ctx.strokeStyle='rgba(255,214,10,.75)';ctx.lineWidth=1*px;ctx.beginPath();
+    for(let j=0;j<st.rows;j++)for(let i=0;i<st.cols;i++){const cx=x0+(i+.5)*cw,cy=y0+(j+.5)*chh;quad(cx-cw*f/2,cy-chh*f/2,cx+cw*f/2,cy+chh*f/2)}ctx.stroke()}
+  if(lastMissing&&lastMissing.cols===st.cols&&lastMissing.rows===st.rows&&lastMissing.set.size){
+    ctx.save();ctx.setLineDash([4*px,3*px]);ctx.lineWidth=2*px;ctx.strokeStyle='#ff3b5c';ctx.beginPath();
+    for(const idx of lastMissing.set){const ci=idx%st.cols,cj=(idx/st.cols)|0,ix=cw*.08,iy=chh*.08;
+      quad(x0+ci*cw+ix,y0+cj*chh+iy,x0+(ci+1)*cw-ix,y0+(cj+1)*chh-iy)}ctx.stroke();ctx.restore()}
+  ctx.beginPath();quad(x0,y0,x1,y1);ctx.lineWidth=2.5*px;ctx.strokeStyle='#ffd60a';ctx.stroke();
+  const r=9*px;
+  [[x0,y0],[x1,y0],[x1,y1],[x0,y1]].forEach(q=>{const p=toD(q[0],q[1]);ctx.beginPath();ctx.arc(p[0],p[1],r,0,Math.PI*2);ctx.fillStyle='#ffd60a';ctx.fill();
+    ctx.lineWidth=2*px;ctx.strokeStyle='#111';ctx.stroke()});
+  }
+  if($('showLines').checked&&tool==='count'&&dots[axis].length){const D=sortedDots(axis);
+    ctx.beginPath();for(const o of D){if(axis==='cols'){mv(o[0],0);ln(o[0],PH)}else{mv(0,o[1]);ln(PW,o[1])}}
+    ctx.lineWidth=1.5*px;ctx.strokeStyle='rgba(0,224,198,.4)';ctx.stroke()}
+  if($('showDots').checked&&(dots.cols.length||dots.rows.length)){
+    for(const ax of ['cols','rows']){if(ax===axis&&tool==='count')continue;
+      for(const o of sortedDots(ax)){const p=toD(o[0],o[1]);ctx.beginPath();ctx.arc(p[0],p[1],3.5*px,0,Math.PI*2);ctx.fillStyle='rgba(0,224,198,.55)';ctx.fill()}}
+    if(tool==='count'){const D=sortedDots(axis);
+      ctx.font=`600 ${11*px}px "IBM Plex Mono", monospace`;ctx.textAlign='center';ctx.textBaseline='middle';
+      D.forEach((o,k)=>{const p=toD(o[0],o[1]);ctx.beginPath();ctx.arc(p[0],p[1],10*px,0,Math.PI*2);ctx.fillStyle='#00e0c6';ctx.fill();
+        ctx.lineWidth=1.5*px;ctx.strokeStyle='#0b1418';ctx.stroke();ctx.fillStyle='#0b1418';ctx.fillText(String(k+1),p[0],p[1]+.5*px)})}}
+  if(($('showLines').checked&&edges.length)||edgeDraft){
+    const all=edgeDraft&&edgeDraft.b?edges.concat([edgeDraft]):edges,R=2*Math.max(PW,PH);
+    for(const L of all){if(L!==edgeDraft&&!$('showLines').checked)continue;
+      const a=sToD(L.a),b=sToD(L.b),dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy)||1,ux=dx/len,uy=dy/len;
+      const vert=L.kind?L.kind==='v':Math.abs(dy)>Math.abs(dx),col=vert?'#c77dff':'#ff7ad9';
+      ctx.beginPath();ctx.moveTo(a[0]-ux*R,a[1]-uy*R);ctx.lineTo(b[0]+ux*R,b[1]+uy*R);
+      ctx.setLineDash([6*px,5*px]);ctx.lineWidth=1.2*px;ctx.strokeStyle=col;ctx.stroke();ctx.setLineDash([]);
+      ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.lineWidth=4*px;ctx.strokeStyle='rgba(0,0,0,.5)';ctx.stroke();
+      ctx.lineWidth=2.2*px;ctx.strokeStyle=col;ctx.stroke();
+      for(const p of [a,b]){ctx.beginPath();ctx.arc(p[0],p[1],3.5*px,0,Math.PI*2);ctx.fillStyle=col;ctx.fill()}}}
+  {const segs=[];for(const ax of LVKEYS)if(levelRefs[ax])segs.push([ax,levelRefs[ax][0],levelRefs[ax][1]]);
+    if(levelPick&&levelPick.pts.length)segs.push([levelPick.ax,levelPick.pts[0],levelPick.hover]);
+    ctx.font=`700 ${11*px}px "IBM Plex Mono", monospace`;ctx.textAlign='center';ctx.textBaseline='middle';
+    for(const[ax,pa,pb]of segs){const a=sToD(pa),b=pb?sToD(pb):null,col=LVK[ax]==='v'?'#3ddc84':'#ffd23f';
+      if(b){ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.lineWidth=4*px;ctx.strokeStyle='rgba(0,0,0,.5)';ctx.stroke();ctx.lineWidth=2*px;ctx.strokeStyle=col;ctx.stroke()}
+      for(const p of [a,b])if(p){ctx.beginPath();ctx.arc(p[0],p[1],7*px,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();ctx.lineWidth=1.5*px;ctx.strokeStyle='#0b1418';ctx.stroke();
+        ctx.fillStyle='#0b1418';ctx.fillText(ax.toUpperCase(),p[0],p[1]+.5*px)}}}
+  if(lasso&&lasso.pts.length>1){ctx.beginPath();lasso.pts.forEach((p,i)=>{const q=sToD(p);i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])});ctx.closePath();
+    ctx.fillStyle=lasso.mode==='add'?'rgba(235,30,70,.25)':'rgba(255,255,255,.25)';ctx.fill();
+    ctx.setLineDash([5*px,4*px]);ctx.lineWidth=2*px;ctx.strokeStyle=lasso.mode==='add'?'#ff3b5c':'#ffffff';ctx.stroke();ctx.setLineDash([])}
+  ctx.setTransform(1,0,0,1,0,0);
+  $('zl').textContent=Math.round(view.z*100)+'%';
+  for(const n of ['cols','rows']){const el=$(n+'2');if(document.activeElement!==el&&+el.value!==st[n])el.value=st[n]}
+}
+
+/* ---------- box dragging, pan, zoom ---------- */
+let drag=null,pinch=null,spaceDown=false;const ptrs=new Map();
+function bpos(cx,cy){const b=cv.getBoundingClientRect();return[(cx-b.left)*cv.width/b.width,(cy-b.top)*cv.height/b.height]}
+function dpos(cx,cy){const[bx,by]=bpos(cx,cy),s=bs*view.z;return[view.x+bx/s,view.y+by/s]}
+function ipos(cx,cy){const d=dpos(cx,cy);return toO(d[0],d[1])}
+function hit(x,y){
+  const tol=22*rr/(bs*view.z),{x0,y0,x1,y1}=rect,near=(a,b)=>Math.abs(a-b)<tol;let t='';
+  if(near(y,y0)&&x>x0-tol&&x<x1+tol)t+='t';else if(near(y,y1)&&x>x0-tol&&x<x1+tol)t+='b';
+  if(near(x,x0)&&y>y0-tol&&y<y1+tol)t+='l';else if(near(x,x1)&&y>y0-tol&&y<y1+tol)t+='r';
+  if(!t&&x>x0&&x<x1&&y>y0&&y<y1)t='m';return t;
+}
+function pinchState(){const p=[...ptrs.values()],mx=(p[0].x+p[1].x)/2,my=(p[0].y+p[1].y)/2;return{d:Math.hypot(p[0].x-p[1].x,p[0].y-p[1].y)||1,mx,my}}
+cv.addEventListener('pointerdown',e=>{
+  if(!prev)return;ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  try{cv.setPointerCapture(e.pointerId)}catch(_){}
+  e.preventDefault();
+  if(ptrs.size===2){drag=null;lasso=null;edgeDraft=null;const p=pinchState(),[ix,iy]=dpos(p.mx,p.my);pinch={d0:p.d,z0:view.z,ix,iy};return}
+  if(ptrs.size>2)return;
+  const[x,y]=ipos(e.clientX,e.clientY);
+  if(levelPick&&e.button===0&&!spaceDown){const o=ipos(e.clientX,e.clientY);levelPick.pts.push(ap(Hinv,o[0],o[1]));
+    if(levelPick.pts.length>=2)finishLevel();else{levelMsg('Now click a second point further along the same edge, as far away as you can.');draw()}return}
+  const panBtn=e.button===1||e.button===2||spaceDown;
+  if(tool==='edge'&&!spaceDown){if(e.button===0){const o=ipos(e.clientX,e.clientY);edgeDraft={a:ap(Hinv,o[0],o[1]),b:null,cx:e.clientX,cy:e.clientY};return}
+    drag={t:'pan',tap:true,btn:e.button,cx:e.clientX,cy:e.clientY,vx:view.x,vy:view.y};return}
+  if(tool==='count'&&!spaceDown){drag={t:'pan',tap:true,btn:e.button,cx:e.clientX,cy:e.clientY,vx:view.x,vy:view.y};return}
+  if(tool==='mark'&&!panBtn){lasso={mode:(markMode==='erase'||e.altKey)?'erase':'add',pts:[ap(Hinv,x,y)]};draw();return}
+  const t=panBtn?'':hit(x,y);
+  if(!t){drag={t:'pan',cx:e.clientX,cy:e.clientY,vx:view.x,vy:view.y};cv.className='grab';return}
+  drag={t,x,y,r:{...rect}};
+});
+cv.addEventListener('pointermove',e=>{
+  if(ptrs.has(e.pointerId))ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(pinch&&ptrs.size===2){
+    const p=pinchState(),nz=Math.max(1,Math.min(32,pinch.z0*p.d/pinch.d0)),[bx,by]=bpos(p.mx,p.my);
+    view.z=nz;const s=bs*nz;view.x=pinch.ix-bx/s;view.y=pinch.iy-by/s;clampView();draw();return}
+  if(levelPick&&levelPick.pts.length===1){const o=ipos(e.clientX,e.clientY);levelPick.hover=ap(Hinv,o[0],o[1]);draw()}
+  if(edgeDraft){const o=ipos(e.clientX,e.clientY);edgeDraft.b=ap(Hinv,o[0],o[1]);draw();return}
+  if(lasso){const[x,y]=ipos(e.clientX,e.clientY),p=ap(Hinv,x,y),l=lasso.pts[lasso.pts.length-1],q=ap(H,l[0],l[1]);
+    if(Math.hypot(x-q[0],y-q[1])>3*rr/(bs*view.z)){lasso.pts.push(p);draw()}return}
+  if(!drag){if(prev&&e.pointerType==='mouse'&&tool==='box'){const[x,y]=ipos(e.clientX,e.clientY),t=hit(x,y);
+      cv.className=spaceDown||(!t&&view.z>1)?'grab':t?'move':''}return}
+  if(drag.t==='pan'){const b=cv.getBoundingClientRect(),s=bs*view.z;
+    view.x=drag.vx-(e.clientX-drag.cx)*cv.width/b.width/s;view.y=drag.vy-(e.clientY-drag.cy)*cv.height/b.height/s;clampView();draw();return}
+  const[x,y]=ipos(e.clientX,e.clientY),dx=x-drag.x,dy=y-drag.y,r={...drag.r},t=drag.t;
+  if(t==='m'){const w=r.x1-r.x0,h=r.y1-r.y0;r.x0=Math.max(0,Math.min(PW-w,r.x0+dx));r.y0=Math.max(0,Math.min(PH-h,r.y0+dy));r.x1=r.x0+w;r.y1=r.y0+h}
+  else{const m=2/(bs*view.z);
+    if(t.includes('t'))r.y0=Math.min(r.y0+dy,r.y1-m);if(t.includes('b'))r.y1=Math.max(r.y1+dy,r.y0+m);
+    if(t.includes('l'))r.x0=Math.min(r.x0+dx,r.x1-m);if(t.includes('r'))r.x1=Math.max(r.x1+dx,r.x0+m)}
+  rect=clampR(r);squareRows();sched();
+});
+const endPtr=e=>{ptrs.delete(e.pointerId);if(ptrs.size<2)pinch=null;
+  if(edgeDraft){const d=edgeDraft;edgeDraft=null;
+    if(e.type==='pointerup'){if(!d.b||Math.hypot(e.clientX-d.cx,e.clientY-d.cy)<8)removeNearestEdge(e.clientX,e.clientY);
+      else{const p=ap(H,d.a[0],d.a[1]),q=ap(H,d.b[0],d.b[1]),kind=Math.abs(q[1]-p[1])>Math.abs(q[0]-p[0])?'v':'h';
+        edges.push({a:d.a,b:d.b,kind});edgesChanged(kind);return}}
+    draw();return}
+  if(lasso){const l=lasso;lasso=null;if(l.pts.length>=3&&e.type==='pointerup'){strokes.push(l);rebuildMask()}sched()}
+  if(drag&&drag.tap&&e.type==='pointerup'&&Math.hypot(e.clientX-drag.cx,e.clientY-drag.cy)<6){const right=drag.btn===2;drag=null;if(tool==='edge'){if(right)removeNearestEdge(e.clientX,e.clientY)}else tapDot(e.clientX,e.clientY,right);return}
+  if(drag){const was=drag.t;drag=null;cv.className='';if(was!=='pan')sched()}};
+cv.addEventListener('pointerup',endPtr);cv.addEventListener('pointercancel',endPtr);
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('wheel',e=>{
+  if(!prev)return;e.preventDefault();
+  const dy=e.deltaMode===1?e.deltaY*16:e.deltaMode===2?e.deltaY*400:e.deltaY,[ix,iy]=dpos(e.clientX,e.clientY);
+  zoomAt(view.z*Math.exp(-dy*.0018),ix,iy);
+},{passive:false});
+cv.addEventListener('dblclick',e=>{if(!prev)return;const[ix,iy]=dpos(e.clientX,e.clientY),o=ipos(e.clientX,e.clientY);
+  if(hit(o[0],o[1]))return;if(view.z>1){view={z:1,x:0,y:0};draw()}else zoomAt(3,ix,iy)});
+const typing=()=>{const a=document.activeElement;return a&&(a.tagName==='INPUT'&&a.type!=='range'&&a.type!=='checkbox')};
+document.addEventListener('keydown',e=>{
+  if(e.key===' '&&!typing()&&document.activeElement?.tagName!=='BUTTON'){spaceDown=true;cv.className='grab';if(e.target===document.body)e.preventDefault()}
+  if(e.key==='Escape'&&panel.classList.contains('fs')&&!fsEl())setFs(false);
+});
+document.addEventListener('keyup',e=>{if(e.key===' '){spaceDown=false;cv.className=''}});
+/* ---------- counting dots: one dot per column (or row), placed in any row ---------- */
+function fitAxis(v,idx,pitch){
+  const n=v.length,u=new Set(idx);
+  if(u.size>=2){let mi=0,mv=0;for(let k=0;k<n;k++){mi+=idx[k]+.5;mv+=v[k]}mi/=n;mv/=n;
+    let sxy=0,sxx=0;for(let k=0;k<n;k++){const a=idx[k]+.5-mi;sxy+=a*(v[k]-mv);sxx+=a*a}
+    const B=sxy/sxx;if(B>.5)return[mv-B*mi,B]}
+  let A=0;for(let k=0;k<n;k++)A+=v[k]-(idx[k]+.5)*pitch;return[A/n,pitch];
+}
+const coord=(o,ax)=>ax==='cols'?o[0]:o[1];
+function sortedDots(ax){return dots[ax].map(s=>ap(H,s[0],s[1])).sort((a,b)=>coord(a,ax)-coord(b,ax))}
+function applyDots(ax){
+  const D=sortedDots(ax),n=D.length;if(n<2)return;
+  if($('cntFit').checked){const v=D.map(o=>coord(o,ax)),cur=ax==='cols'?(rect.x1-rect.x0)/st.cols:(rect.y1-rect.y0)/st.rows;
+    const[A,B]=fitAxis(v,v.map((_,k)=>k),cur);if(ax==='cols'){rect.x0=A;rect.x1=A+n*B}else{rect.y0=A;rect.y1=A+n*B}}
+  st[ax]=n;$(ax).value=n;
+  if(ax==='rows'||dots.rows.length>=2){st.square=false;$('square').checked=false}
+}
+function cntStatus(){
+  const D=sortedDots(axis),n=D.length,word=axis==='cols'?'column':'row';
+  $('cntN').textContent=n;$('cntUse').textContent='Use as '+(axis==='cols'?'columns':'rows');
+  if(!n){$('cntStatus').textContent=`Click once on each ${word} of big pixels. Any row works for each dot, so pick the clearest one.`;return}
+  const v=D.map(o=>coord(o,axis)),g=[];for(let k=1;k<n;k++)g.push(v[k]-v[k-1]);
+  let msg=`${n} ${word}${n>1?'s':''} counted.`;
+  if(g.length>=3){const m=g.slice().sort((a,b)=>a-b)[g.length>>1],wide=[],close=[];
+    g.forEach((d,k)=>{if(d>1.6*m)wide.push(k+1);else if(d<.5*m)close.push(k+1)});
+    if(wide.length)msg+=` Big gap after dot ${wide.slice(0,4).join(', ')}: a ${word} may be missing.`;
+    if(close.length)msg+=` Dots ${close.slice(0,4).map(k=>k+'–'+(k+1)).join(', ')} are very close: possibly counted twice.`;
+    if(!wide.length&&!close.length)msg+=' Spacing looks even.'}
+  $('cntStatus').textContent=msg;
+}
+function nearestDot(cx,cy,tolCss){const[x,y]=ipos(cx,cy),tol=tolCss*rr/(bs*view.z);let best=-1,bd=tol;
+  dots[axis].forEach((s,k)=>{const o=ap(H,s[0],s[1]),d=Math.hypot(o[0]-x,o[1]-y);if(d<bd){bd=d;best=k}});return best}
+function dotsChanged(){if($('cntAuto').checked)applyDots(axis);cntStatus();sched()}
+function tapDot(cx,cy,right){
+  const k=nearestDot(cx,cy,right?28:12);
+  if(k>=0)dots[axis].splice(k,1);else if(!right){const[x,y]=ipos(cx,cy);dots[axis].push(ap(Hinv,x,y))}else return;
+  dotsChanged();
+}
+document.querySelectorAll('#axSeg button').forEach(b=>b.addEventListener('click',()=>{axis=b.dataset.axis;
+  document.querySelectorAll('#axSeg button').forEach(x=>{const on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-pressed',on)});cntStatus();draw()}));
+$('cntUse').addEventListener('click',()=>{const n=dots[axis].length;if(n<1)return;if(n<2){setCount(axis,1);return}applyDots(axis);cntStatus();sched()});
+$('cntClear').addEventListener('click',()=>{dots[axis]=[];cntStatus();sched()});
+const gridPref={count:false,other:true};
+$('showGrid').addEventListener('change',()=>{gridPref[tool==='count'?'count':'other']=$('showGrid').checked;draw()});
+$('showDots').addEventListener('change',()=>draw());
+$('cntAuto').addEventListener('change',()=>{if($('cntAuto').checked)dotsChanged()});
+$('cntFit').addEventListener('change',()=>{if($('cntFit').checked&&$('cntAuto').checked)dotsChanged()});
+
+/* ---------- edge lines: straight lines drawn along big-pixel boundaries ---------- */
+function edgeOut(L){return[ap(H,L.a[0],L.a[1]),ap(H,L.b[0],L.b[1])]}
+function edgeAngleOff(L){const[p,q]=edgeOut(L),dx=q[0]-p[0],dy=q[1]-p[1];
+  return Math.atan2(L.kind==='v'?Math.abs(dx):Math.abs(dy),L.kind==='v'?Math.abs(dy):Math.abs(dx))*180/Math.PI}
+function fitEdges(kind){
+  const Ls=edges.filter(l=>l.kind===kind);if(!Ls.length)return;
+  for(let it=0;it<3;it++){
+    const v=Ls.map(l=>{const[p,q]=edgeOut(l);return kind==='v'?(p[0]+q[0])/2:(p[1]+q[1])/2});
+    const o=kind==='v'?rect.x0:rect.y0,n=kind==='v'?st.cols:st.rows,pitch=(kind==='v'?rect.x1-rect.x0:rect.y1-rect.y0)/n;
+    const k=v.map(x=>Math.round((x-o)/pitch));let A,B=pitch;
+    if(new Set(k).size>=2){let mk=0,mv=0;for(let i=0;i<v.length;i++){mk+=k[i];mv+=v[i]}mk/=v.length;mv/=v.length;
+      let sxy=0,sxx=0;for(let i=0;i<v.length;i++){sxy+=(k[i]-mk)*(v[i]-mv);sxx+=(k[i]-mk)**2}
+      const b=sxy/sxx;if(b>.5)B=b;A=mv-B*mk}
+    else{A=0;for(let i=0;i<v.length;i++)A+=v[i]-k[i]*B;A/=v.length}
+    if(kind==='v'){rect.x0=A;rect.x1=A+n*B}else{rect.y0=A;rect.y1=A+n*B}
+  }
+}
+function edgeStatus(){
+  const v=edges.filter(l=>l.kind==='v').length,h=edges.length-v;
+  if(!edges.length){$('edgeStatus').textContent='Drag along the boundary between two big pixels. Upright lines mark column edges, flat lines mark row edges.';return}
+  const worst=Math.max(...edges.map(edgeAngleOff));
+  $('edgeStatus').textContent=`${v} column edge${v===1?'':'s'}, ${h} row edge${h===1?'':'s'}. `+
+    (worst>.4?`Lines are up to ${worst.toFixed(1)}° off square: tap Straighten from lines.`:'Lines are square with the grid.');
+}
+function straightenFromLines(){
+  if(!edges.length)return;
+  const p0=[st.rot,st.ver,st.hor],lim=[45,40,40];
+  const cost=p=>{const M=makeH0(PW,PH,p[0],p[1],p[2]);let c=0;
+    for(const L of edges){const a=ap(M,L.a[0],L.a[1]),b=ap(M,L.b[0],L.b[1]),dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy)||1;
+      const e=(L.kind==='v'?dx:dy)/len;c+=e*e*len}
+    return c/edges.length+1e-7*((p[0]-p0[0])**2+(p[1]-p0[1])**2+(p[2]-p0[2])**2)};
+  let p=p0.slice(),best=cost(p);
+  for(const step of [8,4,2,1,.5,.25,.1,.05,.02]){let better=true;
+    while(better){better=false;
+      for(let d=0;d<3;d++)for(const sg of [1,-1]){const q=p.slice();q[d]=Math.max(-lim[d],Math.min(lim[d],q[d]+sg*step));
+        const c=cost(q);if(c<best-1e-12){best=c;p=q;better=true}}}}
+  setT(Math.round(p[0]*10)/10,Math.round(p[1]*10)/10,Math.round(p[2]*10)/10);onTransform();
+}
+function edgesChanged(kind){if(kind)fitEdges(kind);edgeStatus();sched()}
+function removeNearestEdge(cx,cy){
+  const d=dpos(cx,cy),tol=12*rr/(bs*view.z);let bi=-1,bd=tol;
+  edges.forEach((L,i)=>{const a=sToD(L.a),b=sToD(L.b),vx=b[0]-a[0],vy=b[1]-a[1],t=Math.max(0,Math.min(1,((d[0]-a[0])*vx+(d[1]-a[1])*vy)/(vx*vx+vy*vy||1)));
+    const dist=Math.hypot(a[0]+t*vx-d[0],a[1]+t*vy-d[1]);if(dist<bd){bd=dist;bi=i}});
+  if(bi>=0){const k=edges[bi].kind;edges.splice(bi,1);edgesChanged(null)}
+}
+$('edgeStraight').addEventListener('click',straightenFromLines);
+$('edgeFit').addEventListener('click',()=>{fitEdges('v');fitEdges('h');edgeStatus();sched()});
+$('edgeClear').addEventListener('click',()=>{edges=[];edgeStatus();sched()});
+$('showLines').addEventListener('change',()=>draw());
+
+$('cntCopy').addEventListener('click',()=>{const t=String(dots[axis].length);
+  const done=()=>{$('cntCopy').textContent='Copied';setTimeout(()=>$('cntCopy').textContent='Copy',1200)};
+  try{navigator.clipboard.writeText(t).then(done,()=>{})}catch(_){}});
+document.querySelectorAll('#toolSeg button').forEach(b=>b.addEventListener('click',()=>{tool=b.dataset.tool;$('cntBar').hidden=tool!=='count';$('markBar').hidden=tool!=='mark';$('edgeBar').hidden=tool!=='edge';if(tool==='edge'){edgeStatus();$('showLines').checked=true}$('showGrid').checked=gridPref[tool==='count'?'count':'other'];if(tool==='count')cntStatus();
+  document.querySelectorAll('#toolSeg button').forEach(x=>{const on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-pressed',on)});cv.className='';draw()}));
+document.querySelectorAll('#markSeg button').forEach(b=>b.addEventListener('click',()=>{markMode=b.dataset.mm;
+  document.querySelectorAll('#markSeg button').forEach(x=>{const on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-pressed',on)})}));
+const setMarkT=v=>{v=Math.max(0,Math.min(100,Math.round(+v||0)));$('markT').value=v;$('markTn').value=v;markAlpha=(100-v)/100;markVer++;draw()};
+$('markT').addEventListener('input',()=>setMarkT($('markT').value));
+$('markTn').addEventListener('input',()=>{if($('markTn').value!=='')setMarkT($('markTn').value)});
+$('markTn').addEventListener('change',()=>setMarkT($('markTn').value));
+const setMarkShow=on=>{markShow=on;$('showMarks').checked=on;markVer++;draw()};
+$('showMarks').addEventListener('change',()=>setMarkShow($('showMarks').checked));
+document.addEventListener('keydown',e=>{if((e.key==='m'||e.key==='M')&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!typing())setMarkShow(!markShow)});
+setMarkT(45);
+$('undoM').addEventListener('click',()=>{if(strokes.length){strokes.pop();rebuildMask();sched()}});
+$('clearM').addEventListener('click',()=>{if(strokes.length){strokes=[];rebuildMask();sched()}});
+$('showFill').addEventListener('change',()=>result());
+$('zIn').addEventListener('click',()=>zoomCentre(1.5));
+$('zOut').addEventListener('click',()=>zoomCentre(1/1.5));
+$('zFit').addEventListener('click',()=>{view={z:1,x:0,y:0};draw()});
+
+/* ---------- full screen ---------- */
+const fsEl=()=>document.fullscreenElement||document.webkitFullscreenElement;
+(function(){const g=$('fsGrip'),slot=$('fsSlot');let d=null;
+  const setH=h=>{h=Math.max(30,Math.min(innerHeight*.8,h));slot.style.height=h+'px';relayout()};
+  g.addEventListener('pointerdown',e=>{d={y:e.clientY,h:slot.offsetHeight};g.setPointerCapture(e.pointerId);e.preventDefault()});
+  g.addEventListener('pointermove',e=>{if(d)setH(d.h-(e.clientY-d.y))});
+  const end=()=>{d=null};g.addEventListener('pointerup',end);g.addEventListener('pointercancel',end);
+  g.addEventListener('dblclick',()=>{slot.style.height='';relayout()});
+  g.addEventListener('keydown',e=>{if(e.key==='ArrowUp'||e.key==='ArrowDown'){e.preventDefault();setH(slot.offsetHeight+(e.key==='ArrowUp'?24:-24))}});
+  ['tBlock','aBlock'].forEach(id=>$(id).addEventListener('toggle',relayout));
+})();
+/* ---------- level with two points ---------- */
+function levelMsg(t){$('levelStatus').textContent=t}
+const LVNAME={l:'Left edge',r:'Right edge',t:'Top edge',b:'Bottom edge'};
+function armLevel(ax){levelPick=ax?{ax,pts:[],hover:null}:null;
+  document.querySelectorAll('.lvbtn').forEach(b=>{const on=b.dataset.ax===ax;b.classList.toggle('armed',on);b.textContent=on?'Cancel':'Pick 2 points'});
+  if(ax)levelMsg({l:'Click a point low on the left edge of the art (it should run straight up and down).',r:'Click a point low on the right edge of the art (it should run straight up and down).',
+    t:'Click a point at one end of the top edge of the art (it should be level).',b:'Click a point at one end of the bottom edge of the art (it should be level).'}[ax]);
+  draw()}
+function lineOff(M,ax,a,b){const u=ap(M,a[0],a[1]),v=ap(M,b[0],b[1]),dx=v[0]-u[0],dy=v[1]-u[1];
+  return LVK[ax]==='v'?Math.atan2(Math.abs(dx),Math.abs(dy)):Math.atan2(Math.abs(dy),Math.abs(dx))}
+function solveLevel(){
+  const refs=LVKEYS.filter(ax=>levelRefs[ax]);if(!refs.length){levelMsg('');return}
+  const ds=new Set();let auto=false;
+  refs.forEach(ax=>{const v=$('lvWhat_'+ax).value;if(v==='a')auto=true;else ds.add(+v)});
+  if(auto){ds.add(0);if(levelRefs.l&&levelRefs.r)ds.add(1);if(levelRefs.t&&levelRefs.b)ds.add(2)}
+  const dims=[...ds],lim=[45,40,40],p0=[st.rot,st.ver,st.hor];
+  const errs=p=>{const M=makeH0(PW,PH,p[0],p[1],p[2]);return refs.map(ax=>lineOff(M,ax,levelRefs[ax][0],levelRefs[ax][1]))};
+  const cost=p=>errs(p).reduce((t,e)=>t+e*e,0);
+  const before=errs(p0);let p=p0.slice(),best=cost(p);
+  for(const step of [8,4,2,1,.5,.25,.1,.05,.02,.01]){let better=true;
+    while(better){better=false;for(const d of dims)for(const sg of [1,-1]){const q=p.slice();q[d]=Math.max(-lim[d],Math.min(lim[d],q[d]+sg*step));
+      const c=cost(q);if(c<best-1e-14){best=c;p=q;better=true}}}}
+  p=p.map(v=>Math.round(v*100)/100);setT(p[0],p[1],p[2]);onTransform();
+  const after=errs(p),deg=r=>(r*180/Math.PI).toFixed(2)+'°';
+  const parts=refs.map((ax,i)=>`${LVNAME[ax]}: ${deg(before[i])} → ${deg(after[i])}`);
+  const left=after.some(e=>e*180/Math.PI>.05);
+  levelMsg(parts.join(' · ')+(left?'. Some is left over: try a different "fix with" slider, or add the opposite edge.':'.'));
+}
+function finishLevel(){const{ax,pts}=levelPick;armLevel(null);
+  if(Math.hypot(pts[1][0]-pts[0][0],pts[1][1]-pts[0][1])<3){levelMsg('Those points are too close together. Try again with points further apart.');return}
+  levelRefs[ax]=[pts[0],pts[1]];solveLevel()}
+document.querySelectorAll('.lvbtn').forEach(b=>b.addEventListener('click',()=>armLevel(levelPick&&levelPick.ax===b.dataset.ax?null:b.dataset.ax)));
+document.querySelectorAll('[data-clr]').forEach(b=>b.addEventListener('click',()=>{levelRefs[b.dataset.clr]=null;if(levelPick&&levelPick.ax===b.dataset.clr)armLevel(null);levelMsg('');draw()}));
+LVKEYS.forEach(ax=>$('lvWhat_'+ax).addEventListener('change',()=>{if(levelRefs[ax])solveLevel()}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&levelPick){armLevel(null);levelMsg('')}});
+/* ---------- export the straightened photo ---------- */
+function straightenedCanvas(){
+  let x0=0,y0=0,x1=PW,y1=PH;
+  if($('expCrop').value==='grid'){const m=.06*Math.max(rect.x1-rect.x0,rect.y1-rect.y0);
+    x0=Math.max(0,rect.x0-m);y0=Math.max(0,rect.y0-m);x1=Math.min(PW,rect.x1+m);y1=Math.min(PH,rect.y1+m)}
+  const W=Math.max(1,Math.round((x1-x0)*Sx)),Hh=Math.max(1,Math.round((y1-y0)*Sy));
+  const M=mul([Sx,0,0,0,Sy,0,0,0,1],mul(Hinv,[(x1-x0)/W,0,x0,0,(y1-y0)/Hh,y0,0,0,1]));
+  const img=new ImageData(W,Hh);warpInto(full.data,full.w,full.h,img.data,W,Hh,M,null);
+  if($('expAdj').checked&&adjOn)for(let k=0;k<img.data.length;k+=4)if(img.data[k+3])adjPix(img.data,k);
+  const c=document.createElement('canvas');c.width=W;c.height=Hh;c.getContext('2d').putImageData(img,0,0);
+  return{c,box:[x0,y0,x1,y1]};
+}
+function expMsg(t){$('expStatus').textContent=t}
+let dlNS;const getDL=async()=>{if(dlNS!==undefined)return dlNS;try{dlNS=(window.claude&&window.claude.use)?await window.claude.use('downloads'):null}catch(_){dlNS=null}return dlNS};
+$('expSave').addEventListener('click',async()=>{
+  if(!full)return;const jpg=$('expFmt').value==='jpg';expMsg('Preparing the image…');
+  await new Promise(r=>setTimeout(r,20));
+  let{c}=straightenedCanvas();
+  if(jpg){const f=document.createElement('canvas');f.width=c.width;f.height=c.height;const x=f.getContext('2d');x.fillStyle='#ffffff';x.fillRect(0,0,f.width,f.height);x.drawImage(c,0,0);c=f}
+  const blob=await new Promise(r=>c.toBlob(r,jpg?'image/jpeg':'image/png',.93));
+  const name='pixel-extract-straightened.'+(jpg?'jpg':'png');
+  await getDL();
+  if(dlNS){try{await dlNS.save({filename:name,data:blob});expMsg(`Saved ${name} (${c.width} × ${c.height}).`);return}
+    catch(e){if(e&&e.code==='declined'){expMsg('Save cancelled.');return}if(e&&e.code==='rate_limited'){expMsg('A save prompt is already open. Finish it, then try again.');return}}}
+  const url=URL.createObjectURL(blob),pv=$('expPrev');pv.src=url;pv.hidden=false;
+  expMsg('Saving isn\'t available here, so the image is shown below: right-click or long-press it and choose Save image.');
+});
+$('expUse').addEventListener('click',async()=>{
+  if(!full)return;expMsg('Loading the straightened photo…');await new Promise(r=>setTimeout(r,20));
+  const{c,box}=straightenedCanvas(),[bx0,by0,bx1,by1]=box,oldH=H;
+  const keep={strokes:strokes.map(s=>({mode:s.mode,pts:s.pts.map(p=>ap(oldH,p[0],p[1]))})),
+    cols:dots.cols.map(p=>ap(oldH,p[0],p[1])),rows:dots.rows.map(p=>ap(oldH,p[0],p[1])),
+    edges:edges.map(l=>({a:ap(oldH,l.a[0],l.a[1]),b:ap(oldH,l.b[0],l.b[1]),kind:l.kind})),
+    lv:Object.fromEntries(LVKEYS.map(k=>[k,levelRefs[k]&&levelRefs[k].map(p=>ap(oldH,p[0],p[1]))])),rect:{...rect}};
+  setSource(c,c.width,c.height);
+  const kx=PW/(bx1-bx0),ky=PH/(by1-by0),m=p=>[(p[0]-bx0)*kx,(p[1]-by0)*ky];
+  strokes=keep.strokes.map(s=>({mode:s.mode,pts:s.pts.map(m)}));dots={cols:keep.cols.map(m),rows:keep.rows.map(m)};
+  edges=keep.edges.map(l=>({a:m(l.a),b:m(l.b),kind:l.kind}));levelRefs=Object.fromEntries(LVKEYS.map(k=>[k,keep.lv[k]&&keep.lv[k].map(m)]));
+  rect={x0:(keep.rect.x0-bx0)*kx,x1:(keep.rect.x1-bx0)*kx,y0:(keep.rect.y0-by0)*ky,y1:(keep.rect.y1-by0)*ky};
+  setT(0,0,0);computeH();rebuildMask();
+  if($('expAdj').checked&&adjOn){$('adjReset').click()}
+  $('expPrev').hidden=true;levelMsg('');
+  result();layout();if(tool==='count')cntStatus();if(tool==='edge')edgeStatus();
+  expMsg(`Now working on the straightened photo (${c.width} × ${c.height}). Sliders are back at zero; your grid, dots, lines and marks came with it.`);
+});
+/* ---------- snap the grid box onto the edges the user drew ---------- */
+function snapBox(){
+  const V=[],Hz=[];
+  const add=(kind,a,b)=>{const p=ap(H,a[0],a[1]),q=ap(H,b[0],b[1]);(kind==='v'?V:Hz).push(kind==='v'?(p[0]+q[0])/2:(p[1]+q[1])/2)};
+  edges.forEach(l=>add(l.kind,l.a,l.b));
+  const fixed={};LVKEYS.forEach(k=>{const L=levelRefs[k];if(!L)return;const p=ap(H,L[0][0],L[0][1]),q=ap(H,L[1][0],L[1][1]);fixed[k]=LVK[k]==='v'?(p[0]+q[0])/2:(p[1]+q[1])/2});
+  if(!V.length&&!Hz.length&&!Object.keys(fixed).length)return'Draw some edges first: pick points for the Left, Right, Top or Bottom edge, or draw lines with the Edges tool along the outer border of the art.';
+  const r={...rect},did=[];
+  const side=(vals,lo,hi,names)=>{if(!vals.length)return;
+    if(vals.length>=2){r[lo]=Math.min(...vals);r[hi]=Math.max(...vals);did.push(names[0]+' and '+names[1]);return}
+    const v=vals[0];if(Math.abs(v-r[lo])<=Math.abs(v-r[hi])){r[lo]=v;did.push(names[0])}else{r[hi]=v;did.push(names[1])}};
+  side(V,'x0','x1',['left','right']);side(Hz,'y0','y1',['top','bottom']);
+  const SIDE={l:['x0','left'],r:['x1','right'],t:['y0','top'],b:['y1','bottom']};
+  for(const k in fixed){r[SIDE[k][0]]=fixed[k];if(!did.some(d=>d.includes(SIDE[k][1])))did.push(SIDE[k][1])}
+  if(r.x1-r.x0<4||r.y1-r.y0<4)return'Those edges would make the box too small. Check that your edge lines are on the outer border.';
+  rect=r;sched();
+  return'Snapped the '+did.join(', ')+' side'+(did.join().includes(' and ')||did.length>1?'s':'')+' of the grid box to your edges.';
+}
+document.querySelectorAll('.snapbox').forEach(b=>b.addEventListener('click',()=>{const m=snapBox();
+  if(b.closest('#edgeBar'))$('edgeStatus').textContent=m;else levelMsg(m)}));
+/* ---------- palette export (GIMP-style formats, 256 colours max) ---------- */
+let lastPal=[];
+const PE={css:{ext:'css',name:'CSS stylesheet'},java:{ext:'java',name:'Java map'},php:{ext:'php',name:'PHP dictionary'},py:{ext:'py',name:'Python dictionary'},txt:{ext:'txt',name:'Text file'}};
+function palText(fmt,pal){
+  const rgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)),nm=i=>'color'+String(i+1).padStart(pal.length>99?3:2,'0');
+  if(fmt==='css')return'/* Generated with Pixel Extract palette export */\n'+pal.map((h,i)=>{const[r,g,b]=rgb(h);return`.${nm(i)} { color: rgb(${r}, ${g}, ${b}) }`}).join('\n')+'\n';
+  if(fmt==='java')return'import java.awt.Color;\nimport java.util.Hashtable;\n\n// Generated with Pixel Extract palette export\npublic class PixelExtractPalette {\n    Hashtable<String, Color> colors;\n\n    public PixelExtractPalette() {\n        colors = new Hashtable<String, Color>();\n'
+    +pal.map((h,i)=>`        colors.put("${nm(i)}", new Color(0x${h.slice(1).toUpperCase()}));`).join('\n')+'\n    }\n}\n';
+  if(fmt==='php')return"<?php\n/* Generated with Pixel Extract palette export */\n$colors = array(\n"+pal.map((h,i)=>`  '${nm(i)}' => '${h}',`).join('\n')+"\n);\n?>\n";
+  if(fmt==='py')return'# Generated with Pixel Extract palette export\ncolors = {\n'+pal.map((h,i)=>{const[r,g,b]=rgb(h);return`    '${nm(i)}': (${r}, ${g}, ${b}),`}).join('\n')+'\n}\n';
+  return pal.join('\n')+'\n';
+}
+function palExport(){
+  const n=lastPal.length,ok=n>0&&n<=256;
+  $('peCopy').disabled=!ok;$('peText').hidden=!ok;peUpdate();
+  if(!ok){$('peStatus').textContent=n?`This result has ${n} colours. Palette export works up to 256: switch Colours to Palette to reduce it.`:'';return}
+  $('peStatus').textContent=`${n} colour${n===1?'':'s'}, most used first.`;$('peText').value=palText($('peFmt').value,lastPal);
+}
+$('peFmt').addEventListener('change',palExport);
+$('peCopy').addEventListener('click',()=>{const t=$('peText').value,done=()=>{$('peCopy').textContent='Copied';setTimeout(()=>$('peCopy').textContent='Copy',1200)};
+  const fb=()=>{$('peText').select()};try{navigator.clipboard.writeText(t).then(done,fb)}catch(_){fb()}});
+/* minimal stored (uncompressed) zip, so the file inside keeps its real extension */
+/* minimal stored (uncompressed) zip, so each file inside keeps its real extension */
+function zipFiles(files){
+  const enc=new TextEncoder();let c;const T=zipFiles.T||(zipFiles.T=Array.from({length:256},(_,n)=>{c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;return c>>>0}));
+  const d=new Date(),dt=((d.getHours()<<11)|(d.getMinutes()<<5)|(d.getSeconds()>>1))&0xFFFF,dd=(((d.getFullYear()-1980)<<9)|((d.getMonth()+1)<<5)|d.getDate())&0xFFFF;
+  const parts=[],central=[];let off=0;
+  for(const f of files){const data=enc.encode(f.text),fn=enc.encode(f.name);let crc=0xFFFFFFFF;for(const b of data)crc=T[(crc^b)&255]^(crc>>>8);crc=(crc^0xFFFFFFFF)>>>0;
+    const lh=new DataView(new ArrayBuffer(30));lh.setUint32(0,0x04034b50,true);lh.setUint16(4,20,true);lh.setUint16(6,0x0800,true);lh.setUint16(10,dt,true);lh.setUint16(12,dd,true);
+    lh.setUint32(14,crc,true);lh.setUint32(18,data.length,true);lh.setUint32(22,data.length,true);lh.setUint16(26,fn.length,true);
+    const ch=new DataView(new ArrayBuffer(46));ch.setUint32(0,0x02014b50,true);ch.setUint16(4,20,true);ch.setUint16(6,20,true);ch.setUint16(8,0x0800,true);ch.setUint16(12,dt,true);ch.setUint16(14,dd,true);
+    ch.setUint32(16,crc,true);ch.setUint32(20,data.length,true);ch.setUint32(24,data.length,true);ch.setUint16(28,fn.length,true);ch.setUint32(42,off,true);
+    parts.push(lh,fn,data);central.push(ch,fn);off+=30+fn.length+data.length}
+  const cdLen=central.reduce((t,p)=>t+p.byteLength,0),eh=new DataView(new ArrayBuffer(22));
+  eh.setUint32(0,0x06054b50,true);eh.setUint16(8,files.length,true);eh.setUint16(10,files.length,true);eh.setUint32(12,cdLen,true);eh.setUint32(16,off,true);
+  return new Blob([...parts,...central,eh],{type:'application/zip'});
+}
+const peSel=()=>[...document.querySelectorAll('#peChips .chip')].filter(b=>b.getAttribute('aria-pressed')==='true').map(b=>b.dataset.f);
+function peUpdate(){const n=peSel().length;$('peSave').textContent=n?`Save ${n} as zip`:'Save selected as zip';$('peSave').disabled=!n||!lastPal.length||lastPal.length>256;
+  const all=n===5;$('peAll').textContent=all?'Select none':'Select all'}
+document.querySelectorAll('#peChips .chip').forEach(b=>b.addEventListener('click',()=>{const on=b.getAttribute('aria-pressed')!=='true';b.setAttribute('aria-pressed',on);
+  if(on){$('peFmt').value=b.dataset.f;palExport()}peUpdate()}));
+$('peAll').addEventListener('click',()=>{const all=peSel().length===5;document.querySelectorAll('#peChips .chip').forEach(b=>b.setAttribute('aria-pressed',!all));peUpdate()});
+$('peSave').addEventListener('click',async()=>{
+  const sel=peSel();if(!sel.length||!lastPal.length||lastPal.length>256)return;
+  const files=sel.map(f=>({name:'pixel-extract-palette.'+PE[f].ext,text:palText(f,lastPal)})),name='pixel-extract-palette.zip';
+  await getDL();
+  if(dlNS){try{await dlNS.save({filename:name,data:zipFiles(files)});$('peStatus').textContent=`Saved ${name} with ${files.map(f=>f.name).join(', ')}.`;return}
+    catch(e){if(e&&e.code==='declined'){$('peStatus').textContent='Save cancelled.';return}}}
+  $('peText').select();$('peStatus').textContent='Saving isn\'t available here. Use Copy with the Preview menu to take each format.';
+});
+function setFs(on){panel.classList.toggle('fs',on);(on?$('fsSlot'):$('tPanel')).prepend($('tBlock'));(on?$('fsSlot'):$('aPanel')).append($('aBlock'));$('fsBtn').textContent=on?'Exit full screen':'Full screen';relayout()}
+$('fsBtn').addEventListener('click',()=>{
+  if(panel.classList.contains('fs')){
+    if(fsEl()){const x=document.exitFullscreen||document.webkitExitFullscreen;try{const p=x.call(document);if(p&&p.catch)p.catch(()=>{})}catch(_){}}
+    setFs(false);
+  }else{
+    setFs(true);
+    const rq=panel.requestFullscreen||panel.webkitRequestFullscreen;
+    if(rq){try{const p=rq.call(panel);if(p&&p.catch)p.catch(()=>{})}catch(_){}}
+  }
+});
+['fullscreenchange','webkitfullscreenchange'].forEach(ev=>document.addEventListener(ev,()=>{
+  if(!fsEl()&&panel.classList.contains('fs'))setFs(false);else relayout()}));
+let rPending=false;function sched(){if(rPending)return;rPending=true;requestAnimationFrame(()=>{rPending=false;result();draw()})}
+/* ---------- grid controls ---------- */
+function squareRows(){if(!st.square)return;const cw=(rect.x1-rect.x0)/st.cols;st.rows=Math.max(1,Math.min(512,Math.round((rect.y1-rect.y0)/cw)));$('rows').value=st.rows}
+function setCount(n,v){v=Math.max(1,Math.min(512,Math.round(v)||1));
+  st[n]=v;$(n).value=v;
+  if(n==='rows'&&st.square){st.square=false;$('square').checked=false}if(n==='cols')squareRows();sched()}
+document.querySelectorAll('.step button').forEach(b=>b.addEventListener('click',()=>setCount(b.dataset.s,st[b.dataset.s]+ +b.dataset.d)));
+['cols','rows'].forEach(n=>{$(n).addEventListener('change',()=>setCount(n,+$(n).value));$(n+'2').addEventListener('change',()=>setCount(n,+$(n+'2').value))});
+$('square').addEventListener('change',()=>{st.square=$('square').checked;squareRows();sched()});
+$('inner').addEventListener('input',()=>{st.inner=$('inner').value/100;$('innerV').textContent=$('inner').value+'%';sched()});
+let palCount=16;
+function setPal(k){st.k=k;const on=k>0;if(on){palCount=k;$('pal').value=k;$('palN').value=k}
+  $('palBox').hidden=!on;
+  document.querySelectorAll('#palSeg button').forEach(b=>{const a=(b.dataset.pal==='pal')===on;b.classList.toggle('on',a);b.setAttribute('aria-pressed',a)});
+  $('palHint').textContent=on?`Like a GIF palette: the ${k} most representative colours are picked and every cell snaps to the nearest one. This merges near-shades from light and camera noise.`
+    :'Every cell keeps its exact measured colour: 3 bytes per pixel, up to 16.7 million colours.';
+  sched()}
+document.querySelectorAll('#palSeg button').forEach(b=>b.addEventListener('click',()=>setPal(b.dataset.pal==='pal'?palCount:0)));
+$('pal').addEventListener('input',()=>setPal(+$('pal').value));
+const palNum=()=>{const v=Math.max(2,Math.min(256,Math.round(+$('palN').value||2)));setPal(v)};
+$('palN').addEventListener('change',palNum);$('palN').addEventListener('input',()=>{const v=+$('palN').value;if(v>=2&&v<=256)setPal(Math.round(v))});
+
+/* ---------- auto-detect grid period ---------- */
+function period(P){
+  const n=P.length;if(n<12)return 0;let m=0;for(const v of P)m+=v;m/=n;
+  const d=P.map(v=>v-m);let A0=0;for(const v of d)A0+=v*v;if(!A0)return 0;A0/=n;
+  const L=Math.floor(n/2),A=new Float32Array(L+2);
+  for(let l=1;l<=L+1&&l<n;l++){let s=0;for(let x=0;x+l<n;x++)s+=d[x]*d[x+l];A[l]=s/(n-l)/A0}
+  const peaks=[];let M=0;
+  for(let l=3;l<=L;l++)if(A[l]>A[l-1]&&A[l]>=A[l+1]&&A[l]>0){peaks.push(l);M=Math.max(M,A[l])}
+  if(!peaks.length||M<.08)return 0;
+  const p=peaks.find(l=>A[l]>=.6*M);
+  for(let k=Math.floor(L/p);k>=2;k--){const c=Math.round(k*p);let bl=-1,bv=-1;
+    for(let l=c-2;l<=c+2;l++)if(l>=3&&l<=L&&A[l]>bv){bv=A[l];bl=l}
+    if(bv>=.4*M)return bl/k}
+  return p;
+}
+$('detect').addEventListener('click',()=>{
+  if(!prev)return;const rw=rect.x1-rect.x0,rh=rect.y1-rect.y0;let sc=Sx;
+  if(rw*rh*sc*sc>2.5e6)sc=Math.sqrt(2.5e6/(rw*rh));
+  const w=Math.max(12,Math.round(rw*sc)),h=Math.max(12,Math.round(rh*sc)),Lm=new Float32Array(w*h),D=full.data;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++){const[px,py]=ap(Hinv,rect.x0+(x+.5)/w*rw,rect.y0+(y+.5)/h*rh);
+    const fx=Math.max(0,Math.min(full.w-1,Math.floor(px*Sx))),fy=Math.max(0,Math.min(full.h-1,Math.floor(py*Sy))),k=(fy*full.w+fx)*4;
+    Lm[y*w+x]=.299*D[k]+.587*D[k+1]+.114*D[k+2]}
+  const cp=new Array(w-1).fill(0),rp=new Array(h-1).fill(0);
+  for(let y=0;y<h;y++)for(let x=0;x<w-1;x++)cp[x]+=Math.abs(Lm[y*w+x+1]-Lm[y*w+x]);
+  for(let y=0;y<h-1;y++)for(let x=0;x<w;x++)rp[y]+=Math.abs(Lm[(y+1)*w+x]-Lm[y*w+x]);
+  const pc=period(cp),pr=period(rp);
+  if(!pc&&!pr){$('detStatus').textContent="No repeating grid found. Tighten the box to the artwork's edge, or set the counts by hand.";return}
+  const c=pc?Math.round(w/pc):null,r=pr?Math.round(h/pr):null;
+  st.square=false;$('square').checked=false;
+  if(c){st.cols=c;$('cols').value=c}
+  if(r){st.rows=r;$('rows').value=r}else if(c){st.square=true;$('square').checked=true;squareRows()}
+  $('detStatus').textContent=`Found ${st.cols} × ${st.rows} cells`+(pc?` (about ${(pc/sc*Sx).toFixed(1)} px each in the photo)`:'')+'.'+(!pc||!pr?' One direction was unclear, so check it.':'');
+  sched();
+});
+
+/* ---------- sampling + palette ---------- */
+function kmeans(c,n,k){
+  const R=rng(11),C=[];const d2=(i,j)=>{const a=c[i*3]-C[j][0],b=c[i*3+1]-C[j][1],e=c[i*3+2]-C[j][2];return a*a+b*b+e*e};
+  const f=Math.floor(R()*n);C.push([c[f*3],c[f*3+1],c[f*3+2]]);
+  const dist=new Float64Array(n).fill(Infinity);
+  while(C.length<k){let tot=0;for(let i=0;i<n;i++){dist[i]=Math.min(dist[i],d2(i,C.length-1));tot+=dist[i]}
+    if(!tot)break;let t=R()*tot,i=0;for(;i<n-1;i++){t-=dist[i];if(t<=0)break}C.push([c[i*3],c[i*3+1],c[i*3+2]])}
+  const as=new Int32Array(n);
+  for(let it=0;it<16;it++){
+    for(let i=0;i<n;i++){let b=0,bv=Infinity;for(let j=0;j<C.length;j++){const v=d2(i,j);if(v<bv){bv=v;b=j}}as[i]=b}
+    const s=C.map(()=>[0,0,0,0]);for(let i=0;i<n;i++){const q=s[as[i]];q[0]+=c[i*3];q[1]+=c[i*3+1];q[2]+=c[i*3+2];q[3]++}
+    s.forEach((q,j)=>{if(q[3])C[j]=[q[0]/q[3],q[1]/q[3],q[2]/q[3]]})}
+  return{C,as};
+}
+const hex=(r,g,b)=>'#'+[r,g,b].map(v=>Math.round(v).toString(16).padStart(2,'0')).join('');
+function result(){
+  if(!prev)return;
+  const{cols,rows,inner}=st,{x0,y0,x1,y1}=rect,cw=(x1-x0)/cols,chh=(y1-y0)/rows,N=7,D=full.data,n=cols*rows;
+  const col=new Float32Array(n*3),ok=new Uint8Array(n),Rr=new Uint8Array(81),Gg=new Uint8Array(81),Bb=new Uint8Array(81);
+  const samp=(i,j,frac,M)=>{let m=0;
+    for(let b=0;b<M;b++)for(let a=0;a<M;a++){
+      const u=x0+(i+.5+((a+.5)/M-.5)*frac)*cw,v=y0+(j+.5+((b+.5)/M-.5)*frac)*chh,[px,py]=ap(Hinv,u,v);
+      if(mask&&masked(px,py))continue;
+      const fx=Math.floor(px*Sx),fy=Math.floor(py*Sy);if(fx<0||fy<0||fx>=full.w||fy>=full.h)continue;
+      const k=(fy*full.w+fx)*4;Rr[m]=D[k];Gg[m]=D[k+1];Bb[m]=D[k+2];m++}
+    return m};
+  const med=(arr,m)=>{const s=arr.subarray(0,m).slice().sort();return m%2?s[m>>1]:(s[m/2-1]+s[m/2])/2};
+  let edges=0;
+  for(let j=0;j<rows;j++)for(let i=0;i<cols;i++){
+    let m=samp(i,j,inner,N);
+    if(m<10){const m2=samp(i,j,.92,9);m=m2;if(m2)edges++}   /* centre blocked: read whatever part of the cell is visible */
+    if(!m)continue;const idx=j*cols+i;ok[idx]=1;
+    col[idx*3]=med(Rr,m);col[idx*3+1]=med(Gg,m);col[idx*3+2]=med(Bb,m)}
+  if(adjOn&&$('adjResult').checked){const t=new Float32Array(4);for(let i=0;i<n;i++)if(ok[i]){t[0]=col[i*3];t[1]=col[i*3+1];t[2]=col[i*3+2];
+    adjPix(t,0);col[i*3]=Math.max(0,Math.min(255,t[0]));col[i*3+1]=Math.max(0,Math.min(255,t[1]));col[i*3+2]=Math.max(0,Math.min(255,t[2]))}}
+  /* fill fully blocked cells from neighbours, working inwards */
+  const missing=new Set();for(let i=0;i<n;i++)if(!ok[i])missing.add(i);
+  let left=[...missing],filled=0;
+  while(left.length){const got=[];
+    for(const idx of left){const ci=idx%cols,cj=(idx/cols)|0,nb=[[],[],[]];
+      for(let dj=-1;dj<=1;dj++)for(let di=-1;di<=1;di++){if(!di&&!dj)continue;const a=ci+di,b=cj+dj;
+        if(a<0||b<0||a>=cols||b>=rows)continue;const q=b*cols+a;if(!ok[q])continue;
+        const w=(di&&dj)?1:2;for(let t=0;t<w;t++){nb[0].push(col[q*3]);nb[1].push(col[q*3+1]);nb[2].push(col[q*3+2])}}
+      if(nb[0].length)got.push([idx,nb.map(a=>{a.sort((x,y)=>x-y);return a[a.length>>1]})])}
+    if(!got.length)break;
+    for(const[idx,c]of got){ok[idx]=1;col[idx*3]=c[0];col[idx*3+1]=c[1];col[idx*3+2]=c[2];filled++}
+    const done=new Set(got.map(g=>g[0]));left=left.filter(i=>!done.has(i))}
+  lastMissing={cols,rows,set:missing};
+  let out=col;
+  if(st.k>0){const{C,as}=kmeans(col,n,st.k);out=new Float32Array(n*3);for(let i=0;i<n;i++){const c=C[as[i]];out[i*3]=c[0];out[i*3+1]=c[1];out[i*3+2]=c[2]}}
+  const im=new ImageData(cols,rows),cnt=new Map();
+  for(let i=0;i<n;i++){im.data[i*4]=out[i*3];im.data[i*4+1]=out[i*3+1];im.data[i*4+2]=out[i*3+2];im.data[i*4+3]=ok[i]?255:0;
+    if(ok[i]){const h=hex(im.data[i*4],im.data[i*4+1],im.data[i*4+2]);cnt.set(h,(cnt.get(h)||0)+1)}}
+  const one=document.createElement('canvas');one.width=cols;one.height=rows;one.getContext('2d').putImageData(im,0,0);
+  const sc=Math.max(1,Math.floor(720/Math.max(cols,rows))),big=document.createElement('canvas');big.width=cols*sc;big.height=rows*sc;
+  const bx=big.getContext('2d');bx.imageSmoothingEnabled=false;bx.drawImage(one,0,0,big.width,big.height);
+  if($('showFill').checked&&missing.size){bx.lineWidth=Math.max(1,sc/8);bx.strokeStyle='#e8204a';const o_=bx.lineWidth/2;
+    for(const idx of missing){const ci=idx%cols,cj=(idx/cols)|0;bx.strokeRect(ci*sc+o_,cj*sc+o_,sc-2*o_,sc-2*o_)}}
+  const bigURL=big.toDataURL('image/png');$('big').src=bigURL;$('fsPrev').src=bigURL;
+  const o=$('one');o.src=one.toDataURL('image/png');const os=Math.max(1,Math.min(4,Math.floor(64/Math.max(cols,rows))));o.width=cols*os;o.height=rows*os;
+  $('meta').innerHTML=`<span><b>${cols} × ${rows}</b> px</span><span><b>${cnt.size}</b> colour${cnt.size===1?'':'s'}</span><span>enlarged ×${sc}</span>`+(edges?`<span><b>${edges}</b> read from visible edges</span>`:'')+(filled?`<span><b>${filled}</b> filled from neighbours</span>`:'');
+  lastPal=[...cnt].sort((a,b)=>b[1]-a[1]).map(x=>x[0]);palExport();
+  const sw=$('sw');sw.innerHTML='';
+  if(cnt.size<=48)[...cnt].sort((a,b)=>b[1]-a[1]).forEach(([h,c])=>{const d=document.createElement('div');d.innerHTML=`<i style="background:${h}"></i>${h} <span>${c}</span>`;d.title=`${h}: ${c} cells`;sw.appendChild(d)});
+}
+
+/* ---------- upload ---------- */
+$('file').addEventListener('change',()=>{
+  const f=$('file').files[0];if(!f)return;const url=URL.createObjectURL(f),img=new Image();
+  img.onload=()=>{setSource(img,img.naturalWidth,img.naturalHeight);URL.revokeObjectURL(url);
+    setT(0,0,0);computeH();rect=clampR({x0:PW*.1,y0:PH*.1,x1:PW*.9,y1:PH*.9});
+    setPal(0);st.square=true;$('square').checked=true;squareRows();
+    $('detStatus').textContent='Straighten the photo, fit the box to the artwork, then tap Auto-detect or set the counts.';
+    result();layout()};
+  img.onerror=()=>{$('detStatus').textContent="That file couldn't be opened as an image. Try a JPEG or PNG.";URL.revokeObjectURL(url)};
+  img.src=url;$('file').value='';
+});
+/* ---------- view adjustments (help see the big pixels; optional for the result) ---------- */
+const ADJ=[
+  {id:'exposure',label:'Exposure',min:-3,max:3,step:.05,def:0,fmt:v=>(v>0?'+':'')+v.toFixed(2)+' EV'},
+  {id:'brightness',label:'Brightness',min:-100,max:100,step:1,def:0},
+  {id:'contrast',label:'Contrast',min:-100,max:100,step:1,def:0},
+  {id:'highlights',label:'Highlights',min:-100,max:100,step:1,def:0},
+  {id:'shadows',label:'Shadows',min:-100,max:100,step:1,def:0},
+  {id:'black',label:'Black point',min:0,max:60,step:1,def:0},
+  {id:'white',label:'White point',min:40,max:100,step:1,def:100},
+  {id:'saturation',label:'Saturation',min:-100,max:100,step:1,def:0},
+  {id:'vibrance',label:'Vibrance',min:-100,max:100,step:1,def:0},
+  {id:'warmth',label:'Warmth',min:-100,max:100,step:1,def:0},
+  {id:'posterize',label:'Posterize',min:1,max:16,step:1,def:1,fmt:v=>v<2?'Off':v+' levels'}
+];
+const A={};ADJ.forEach(a=>A[a.id]=a.def);
+let adjOn=false,toneOn=false,colorOn=false,adjVer=0;const LUT=new Uint8ClampedArray(256);
+function buildAdj(){
+  toneOn=['exposure','brightness','contrast','highlights','shadows','black','white'].some(k=>A[k]!==ADJ.find(a=>a.id===k).def);
+  colorOn=A.saturation||A.vibrance||A.warmth;adjOn=toneOn||colorOn||A.posterize>=2;adjVer++;
+  const c01=v=>v<0?0:v>1?1:v,bp=A.black/100,wp=A.white/100,sh=A.shadows/100,hl=A.highlights/100;
+  for(let i=0;i<256;i++){let x=i/255*Math.pow(2,A.exposure);
+    x=c01((x-bp)/Math.max(.02,wp-bp));
+    x+=2*sh*x*(1-x)*(1-x);x+=2*hl*x*x*(1-x);x=c01(x);
+    x=Math.pow(x,Math.pow(2,-A.brightness/100));
+    x=c01((x-.5)*Math.pow(3,A.contrast/100)+.5);LUT[i]=Math.round(x*255)}
+}
+function adjPix(o,k){
+  let r=o[k],g=o[k+1],b=o[k+2];
+  if(toneOn){r=LUT[r|0];g=LUT[g|0];b=LUT[b|0]}
+  if(colorOn){const w=A.warmth/100;r*=1+.18*w;b*=1-.18*w;
+    let f=1+A.saturation/100;if(A.vibrance){const m=(Math.max(r,g,b)-Math.min(r,g,b))/255;f*=1+A.vibrance/100*(1-m)}
+    const L=.299*r+.587*g+.114*b;r=L+(r-L)*f;g=L+(g-L)*f;b=L+(b-L)*f}
+  if(A.posterize>=2){const q=255/(A.posterize-1);r=Math.round(Math.min(255,Math.max(0,r))/q)*q;g=Math.round(Math.min(255,Math.max(0,g))/q)*q;b=Math.round(Math.min(255,Math.max(0,b))/q)*q}
+  o[k]=r;o[k+1]=g;o[k+2]=b;
+}
+(function(){
+  const list=$('adjList');
+  ADJ.forEach(a=>{const d=document.createElement('div');d.className='sl';
+    d.innerHTML=`<label for="adj_${a.id}">${a.label}</label><output id="adj_${a.id}V"></output>
+      <div class="row"><input type="range" id="adj_${a.id}" min="${a.min}" max="${a.max}" step="${a.step}" value="${a.def}">
+      <button class="nud" data-reset="${a.id}" aria-label="Reset ${a.label}" title="Reset ${a.label}">↺</button></div>`;
+    list.appendChild(d)});
+  const show=a=>{const v=A[a.id];$('adj_'+a.id+'V').textContent=a.fmt?a.fmt(v):(a.id==='black'||a.id==='white'?v+'%':(v>0?'+':'')+v);
+    $('adj_'+a.id).value=v};
+  let p=false;const changed=()=>{buildAdj();if(p)return;p=true;requestAnimationFrame(()=>{p=false;if($('adjResult').checked)result();draw()})};
+  ADJ.forEach(a=>{show(a);$('adj_'+a.id).addEventListener('input',()=>{A[a.id]=+$('adj_'+a.id).value;show(a);changed()})});
+  list.addEventListener('click',e=>{const b=e.target.closest('[data-reset]');if(!b)return;const a=ADJ.find(x=>x.id===b.dataset.reset);A[a.id]=a.def;show(a);changed()});
+  $('adjReset').addEventListener('click',()=>{ADJ.forEach(a=>{A[a.id]=a.def;show(a)});changed()});
+  $('adjResult').addEventListener('change',()=>sched());
+  buildAdj();
+})();
+$('sample').addEventListener('click',loadSample);
+
+loadSample();
+})();
+</script>
+
+</body></html>
